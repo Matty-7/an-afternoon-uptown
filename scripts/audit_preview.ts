@@ -8,6 +8,8 @@ export function audit_preview(): Plugin {
     '/__audit/desktop': [1440, 900],
     '/__audit/mobile': [390, 844],
     '/__audit/short': [1280, 720],
+    '/__audit/mortgage_desktop': [1440, 1000],
+    '/__audit/mortgage_mobile': [390, 844],
   };
   return {
     name: 'site-audit-preview',
@@ -20,6 +22,7 @@ export function audit_preview(): Plugin {
           return;
         }
         const [width, height] = viewport;
+        const route = (request.url ?? '').startsWith('/__audit/mortgage_') ? '/portfolio/mortgage-map' : '/';
         response.setHeader('Content-Type', 'text/html; charset=utf-8');
         response.setHeader('Cache-Control', 'no-store');
         response.end(
@@ -28,7 +31,7 @@ export function audit_preview(): Plugin {
             : `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Site audit viewport</title>
 <style>body{margin:0;background:#ddd}iframe{display:block;border:0}</style></head>
-<body><iframe title="Website at ${width} by ${height}" src="/" width="${width}" height="${height}"></iframe></body></html>`,
+<body><iframe title="Website at ${width} by ${height}" src="${route}" width="${width}" height="${height}"></iframe></body></html>`,
         );
       });
     },

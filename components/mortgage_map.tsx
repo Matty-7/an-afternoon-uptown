@@ -1,155 +1,1139 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUpRight, Search, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { mortgage_branches, mortgage_concepts, mortgage_sources, learning_path } from '@/content/mortgage_concepts';
+// This canvas has explicit pan/zoom keyboard controls; the adjacent List view
+// exposes the same content without spatial interaction.
+/* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent, PointerEvent } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  ChevronDown,
+  Focus,
+  Layers,
+  List,
+  Maximize2,
+  Minus,
+  Network,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
+import {
+  mortgage_branches,
+  mortgage_concepts,
+  mortgage_topics,
+  mortgage_sources,
+  mortgage_relationships,
+  mortgage_paths,
+} from "@/content/mortgage_concepts";
+import {
+  build_connection_graph,
+  build_mortgage_graph,
+  concept_index,
+  edge_path,
+  fit_camera,
+  graph_bounds,
+  search_concepts,
+  topic_index,
+  zoom_camera,
+} from "@/lib/mortgage_graph";
+import type { Camera, GraphNode } from "@/lib/mortgage_graph";
+
+type View = "map" | "connections" | "list";
+const branch_index = new Map(
+  mortgage_branches.map((branch) => [branch.id, branch]),
+);
 
 export function MortgageMap() {
-  const [expanded, set_expanded] = useState<string[]>(['basics']);
-  const [selected, set_selected] = useState('principal_interest');
-  const [query, set_query] = useState('');
-  const [connections, set_connections] = useState<{ width: number; height: number; paths: string[] }>({ width: 1, height: 1, paths: [] });
-  const surface_ref = useRef<HTMLDivElement>(null);
-  const detail_ref = useRef<HTMLElement>(null);
-  const selection_ref = useRef(false);
-  const concept = mortgage_concepts.find((item) => item.id === selected)!;
-  const branch = mortgage_branches.find((item) => item.id === concept.branch)!;
-  const search_term = query.trim().toLowerCase();
-  const matches = mortgage_concepts.filter((item) =>
-    `${item.title} ${item.subtitle} ${item.aliases.join(' ')} ${item.summary}`.toLowerCase().includes(search_term),
+  const [depth, set_depth] = useState(0);
+  const [branch_filter, set_branch_filter] = useState("all");
+  const [topic_filter, set_topic_filter] = useState("all");
+  const [view, set_view] = useState<View>("map");
+  const [selected, set_selected] = useState<string | null>(null);
+  const [reader_open, set_reader_open] = useState(false);
+  const [query, set_query] = useState("");
+  const [search_open, set_search_open] = useState(false);
+  const [search_cursor, set_search_cursor] = useState(0);
+  const [path_id, set_path_id] = useState("");
+  const [camera, set_camera] = useState<Camera>({ x: 0, y: 0, scale: 0.5 });
+  const [size, set_size] = useState({ width: 1000, height: 650 });
+  const [is_dragging, set_is_dragging] = useState(false);
+  const [show_help, set_show_help] = useState(false);
+  const [expanded, set_expanded] = useState(false);
+  const canvas_ref = useRef<HTMLDivElement>(null);
+  const reader_ref = useRef<HTMLElement>(null);
+  const search_ref = useRef<HTMLInputElement>(null);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pending_focus = useRef<string | null>(null);
+  const has_measured = useRef(false);
+  const previous_layout = useRef<{
+    key: string;
+    width: number;
+    height: number;
+  } | null>(null);
+  const return_focus = useRef<HTMLButtonElement | null>(null);
+  const concept = selected ? concept_index.get(selected) : undefined;
+  const path = mortgage_paths.find((item) => item.id === path_id);
+  const results = useMemo(() => search_concepts(query).slice(0, 8), [query]);
+  const connection_selection = view === "connections" ? selected : null;
+  const graph = useMemo(
+    () =>
+      view === "connections" && connection_selection
+        ? build_connection_graph(connection_selection)
+        : build_mortgage_graph(depth, branch_filter, topic_filter),
+    [view, connection_selection, depth, branch_filter, topic_filter],
   );
-  const active_branches = search_term
-    ? mortgage_branches.filter((item) => matches.some((match) => match.branch === item.id)).map((item) => item.id)
-    : expanded;
+  const positions = useMemo(
+    () => new Map(graph.map((node) => [node.id, node])),
+    [graph],
+  );
+  const bounds = useMemo(() => graph_bounds(graph), [graph]);
+  const relations = useMemo(
+    () =>
+      selected
+        ? mortgage_relationships.filter(
+            (edge) => edge.source === selected || edge.target === selected,
+          )
+        : [],
+    [selected],
+  );
+  const neighbors = useMemo(
+    () => new Set(relations.flatMap((edge) => [edge.source, edge.target])),
+    [relations],
+  );
+  const active_edges = useMemo(
+    () =>
+      mortgage_relationships.filter(
+        (edge) =>
+          positions.has(edge.source) &&
+          positions.has(edge.target) &&
+          ((selected &&
+            (edge.source === selected || edge.target === selected)) ||
+            (path &&
+              path.steps.includes(edge.source) &&
+              path.steps.includes(edge.target))),
+      ),
+    [positions, selected, path],
+  );
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  }, []);
-
-  useEffect(() => {
-    const surface = surface_ref.current;
-    if (!surface) return;
-    const measure = () => {
-      const root = surface.querySelector<HTMLElement>('.map-root');
-      if (!root) return;
-      const frame = surface.getBoundingClientRect();
-      const center = root.getBoundingClientRect();
-      const paths = Array.from(surface.querySelectorAll<HTMLElement>('[data-map-branch]')).map((item) => {
-        const target = item.getBoundingClientRect();
-        const on_left = target.left < center.left;
-        const x1 = (on_left ? center.left : center.right) - frame.left;
-        const y1 = center.top + center.height / 2 - frame.top;
-        const x2 = (on_left ? target.right : target.left) - frame.left;
-        const y2 = target.top + target.height / 2 - frame.top;
-        const midpoint = (x1 + x2) / 2;
-        return `M ${x1} ${y1} C ${midpoint} ${y1}, ${midpoint} ${y2}, ${x2} ${y2}`;
+    const canvas = canvas_ref.current;
+    if (!canvas || view === "list") return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!has_measured.current) {
+        previous_layout.current = null;
+        has_measured.current = true;
+      }
+      set_size({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
       });
-      const next = { width: frame.width, height: frame.height, paths };
-      set_connections((previous) => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(surface);
-    surface.querySelectorAll('[data-map-branch]').forEach((item) => observer.observe(item));
+    });
+    observer.observe(canvas);
     return () => observer.disconnect();
-  }, [expanded, search_term]);
+  }, [view]);
+  useEffect(() => {
+    const key = `${view}:${connection_selection}:${depth}:${branch_filter}:${topic_filter}`;
+    const previous = previous_layout.current;
+    const focus = pending_focus.current
+      ? positions.get(pending_focus.current)
+      : undefined;
+    if (focus && view === "map") {
+      set_camera({
+        x: size.width / 2 - focus.x,
+        y: size.height / 2 - focus.y,
+        scale: 1,
+      });
+      pending_focus.current = null;
+    } else if (previous?.key === key) {
+      set_camera((c) => ({
+        ...c,
+        x: c.x + (size.width - previous.width) / 2,
+        y: c.y + (size.height - previous.height) / 2,
+      }));
+    } else {
+      set_camera(fit_camera(bounds, size.width, size.height));
+    }
+    previous_layout.current = { key, ...size };
+  }, [
+    bounds,
+    positions,
+    size,
+    view,
+    connection_selection,
+    depth,
+    branch_filter,
+    topic_filter,
+  ]);
+  useEffect(() => {
+    if (!reader_open || !selected) return;
+    // A new concept starts at its title, even after following a lower link.
+    if (reader_ref.current) reader_ref.current.scrollTop = 0;
+    // Focus the reading heading without changing the visitor's page position.
+    reader_ref.current
+      ?.querySelector<HTMLElement>("h2")
+      ?.focus({ preventScroll: true });
+  }, [reader_open, selected]);
 
   useEffect(() => {
-    if (!selection_ref.current) return;
-    if (detail_ref.current) detail_ref.current.scrollTop = 0;
-    detail_ref.current?.focus({ preventScroll: true });
-    if (window.matchMedia('(max-width: 1099px)').matches) {
-      detail_ref.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
-    }
-  }, [selected]);
+    if (!reader_open && !expanded) return;
+    const on_escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (reader_open) set_reader_open(false);
+        else set_expanded(false);
+        canvas_ref.current?.focus({ preventScroll: true });
+      }
+    };
+    window.addEventListener("keydown", on_escape);
+    return () => window.removeEventListener("keydown", on_escape);
+  }, [reader_open, expanded]);
 
-  const select_concept = (id: string) => {
-    const item = mortgage_concepts.find((entry) => entry.id === id);
-    if (!item) return;
-    selection_ref.current = true;
-    set_query('');
-    set_expanded((previous) => previous.includes(item.branch) ? previous : [...previous, item.branch]);
-    if (selected === id) {
-      detail_ref.current?.focus();
-    } else {
-      set_selected(id);
+  function choose_concept(id: string, trigger?: HTMLButtonElement) {
+    if (!concept_index.has(id)) return;
+    if (trigger) return_focus.current = trigger;
+    if (view === "map") {
+      const node = positions.get(id);
+      const layout_is_ready =
+        depth === 2 && branch_filter === "all" && topic_filter === "all" && node;
+      pending_focus.current = layout_is_ready ? null : id;
+      set_depth(2);
+      set_branch_filter("all");
+      set_topic_filter("all");
+      if (layout_is_ready)
+        set_camera({
+          x: size.width / 2 - node.x,
+          y: size.height / 2 - node.y,
+          scale: 1,
+        });
     }
-  };
-  const concept_title = (id: string) => mortgage_concepts.find((item) => item.id === id)!.title;
-  const return_to_map = () => {
-    set_query('');
-    set_expanded((previous) => previous.includes(concept.branch) ? previous : [...previous, concept.branch]);
-    requestAnimationFrame(() => {
-      const node = surface_ref.current?.querySelector<HTMLElement>(`[data-concept-id="${selected}"]`);
-      node?.focus({ preventScroll: true });
-      node?.scrollIntoView({ block: 'center', behavior: 'instant' });
+    set_selected(id);
+    set_reader_open(true);
+    set_search_open(false);
+    set_query("");
+  }
+  function close_reader() {
+    set_reader_open(false);
+    if (return_focus.current?.isConnected)
+      return_focus.current.focus({ preventScroll: true });
+    else canvas_ref.current?.focus({ preventScroll: true });
+  }
+  function focus_selected() {
+    const node = selected ? positions.get(selected) : undefined;
+    if (node)
+      set_camera({
+        x: size.width / 2 - node.x,
+        y: size.height / 2 - node.y,
+        scale: 1,
+      });
+  }
+  function overview() {
+    set_view("map");
+    set_depth(0);
+    set_branch_filter("all");
+    set_topic_filter("all");
+    set_path_id("");
+    set_selected(null);
+    set_reader_open(false);
+    pending_focus.current = null;
+    set_camera(
+      fit_camera(
+        graph_bounds(build_mortgage_graph(0)),
+        size.width,
+        size.height,
+      ),
+    );
+  }
+  function open_branch(id: string) {
+    set_view("map");
+    set_branch_filter(id);
+    set_topic_filter("all");
+    set_depth(1);
+    set_reader_open(false);
+    set_selected(null);
+    set_path_id("");
+  }
+  function choose_path(id: string) {
+    set_path_id(id);
+    const next = mortgage_paths.find((p) => p.id === id);
+    if (next) {
+      set_view("connections");
+      set_selected(next.steps[0]);
+      set_reader_open(true);
+    }
+  }
+  function activate_node(node: GraphNode, trigger: HTMLButtonElement) {
+    if (node.kind === "concept") choose_concept(node.id, trigger);
+    else if (node.kind === "root") overview();
+    else if (node.kind === "topic") {
+      set_view("map");
+      set_branch_filter(node.branch!);
+      set_topic_filter(node.id);
+      set_depth(2);
+      set_selected(null);
+      set_reader_open(false);
+    } else open_branch(node.branch!);
+  }
+  function key_canvas(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget) return;
+    const offsets: Record<string, [number, number]> = {
+      ArrowLeft: [90, 0],
+      ArrowRight: [-90, 0],
+      ArrowUp: [0, 90],
+      ArrowDown: [0, -90],
+    };
+    if (offsets[event.key]) {
+      event.preventDefault();
+      const [x, y] = offsets[event.key];
+      set_camera((c) => ({ ...c, x: c.x + x, y: c.y + y }));
+    } else if (["+", "=", "-"].includes(event.key)) {
+      event.preventDefault();
+      set_camera((c) =>
+        zoom_camera(
+          c,
+          event.key === "-" ? 0.8 : 1.25,
+          size.width / 2,
+          size.height / 2,
+        ),
+      );
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      set_camera(fit_camera(bounds, size.width, size.height));
+    }
+  }
+  function pointer_down(event: PointerEvent<HTMLDivElement>) {
+    if (
+      event.button !== 0 ||
+      (event.target as HTMLElement).closest("button,a,input,select")
+    )
+      return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pointers.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
     });
-  };
+    set_is_dragging(true);
+  }
+  function pointer_move(event: PointerEvent<HTMLDivElement>) {
+    const previous = pointers.current.get(event.pointerId);
+    if (!previous) return;
+    const next = { x: event.clientX, y: event.clientY };
+    if (pointers.current.size === 2) {
+      const other = [...pointers.current.entries()].find(
+        ([id]) => id !== event.pointerId,
+      )![1];
+      const old_distance = Math.hypot(
+        previous.x - other.x,
+        previous.y - other.y,
+      );
+      const distance = Math.hypot(next.x - other.x, next.y - other.y);
+      const rect = event.currentTarget.getBoundingClientRect();
+      const old_x = (previous.x + other.x) / 2 - rect.left;
+      const old_y = (previous.y + other.y) / 2 - rect.top;
+      set_camera((c) => {
+        const zoomed = zoom_camera(
+          c,
+          old_distance > 0 ? distance / old_distance : 1,
+          old_x,
+          old_y,
+        );
+        return {
+          ...zoomed,
+          x: zoomed.x + (next.x - previous.x) / 2,
+          y: zoomed.y + (next.y - previous.y) / 2,
+        };
+      });
+    } else
+      set_camera((c) => ({
+        ...c,
+        x: c.x + next.x - previous.x,
+        y: c.y + next.y - previous.y,
+      }));
+    pointers.current.set(event.pointerId, next);
+  }
+  function pointer_up(event: PointerEvent<HTMLDivElement>) {
+    pointers.current.delete(event.pointerId);
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    if (!pointers.current.size) set_is_dragging(false);
+  }
+  function search_keys(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      set_search_open(true);
+      set_search_cursor((index) =>
+        Math.max(
+          0,
+          Math.min(
+            results.length - 1,
+            index + (event.key === "ArrowDown" ? 1 : -1),
+          ),
+        ),
+      );
+    } else if (event.key === "Enter" && results[search_cursor]) {
+      event.preventDefault();
+      choose_concept(results[search_cursor].id);
+    } else if (event.key === "Escape") set_search_open(false);
+  }
+  const visible_topics = mortgage_topics.filter(
+    (t) => branch_filter === "all" || t.branch === branch_filter,
+  );
 
   return (
-    <div className="mortgage-map">
-      <div className="map-tools">
-        <div className="map-search">
-          <Search size={18} aria-hidden="true" />
-          <label className="sr-only" htmlFor="concept-search">Find a mortgage concept</label>
-          <Input id="concept-search" type="search" placeholder="Find a concept, e.g. CPR or convexity" value={query} onChange={(event) => set_query(event.target.value)} />
-          {query && <Button variant="ghost" className="map-clear" aria-label="Clear search" onClick={() => set_query('')}><X size={18} /></Button>}
+    <section
+      className={`mortgage-atlas ${expanded ? "is-expanded" : ""}`}
+      aria-label="Interactive mortgage knowledge map"
+    >
+      <div className="atlas-intro">
+        <div>
+          <span className="atlas-kicker">A FIELD GUIDE, CONNECTED</span>
+          <p>
+            <strong>{mortgage_concepts.length}</strong> concepts <span>·</span>{" "}
+            <strong>{mortgage_branches.length}</strong> domains <span>·</span>{" "}
+            <strong>{mortgage_relationships.length}</strong> explained
+            connections
+          </p>
         </div>
-        <div className="map-expand-tools">
-          <Button variant="ghost" onClick={() => { set_query(''); set_expanded(mortgage_branches.map((item) => item.id)); }}>Expand all</Button>
-          <Button variant="ghost" onClick={() => { set_query(''); set_expanded([]); }}>Collapse all</Button>
+        <div className="atlas-intro-actions">
+          <button
+            className="atlas-text-button"
+            onClick={() => set_show_help(!show_help)}
+            aria-expanded={show_help}
+          >
+            How to explore <ChevronDown size={15} />
+          </button>
+          <button
+            className="atlas-expand-button"
+            onClick={() => set_expanded(!expanded)}
+            aria-label={expanded ? "Exit expanded map" : "Expand map"}
+            title={expanded ? "Exit expanded map" : "Expand map"}
+            aria-pressed={expanded}
+          >
+            {expanded ? <X size={17} /> : <Maximize2 size={17} />}
+          </button>
         </div>
       </div>
-      <output className="map-result-count">{search_term ? `${matches.length} matching concepts` : `${mortgage_concepts.length} concepts · ${mortgage_branches.length} connected branches`}</output>
-      <div className="map-workspace">
-        <section className="map-tree-panel" aria-label="Mortgage concept map">
-          <div className="map-surface" ref={surface_ref}>
-            <svg className="map-connections" viewBox={`0 0 ${connections.width} ${connections.height}`} preserveAspectRatio="none" aria-hidden="true">
-              {connections.paths.map((path, index) => <path key={index} d={path} />)}
-            </svg>
-            <div className="map-root"><span>MORTGAGE</span><strong>&amp; MBS</strong><span>Start with a branch</span></div>
-            <Accordion multiple value={active_branches} onValueChange={(value) => { set_query(''); set_expanded(value as string[]); }} className="map-branches">
-              {mortgage_branches.map((item, index) => {
-                const nodes = matches.filter((node) => node.branch === item.id);
+      {show_help && (
+        <div className="atlas-help">
+          <p>
+            Start with a domain, search for a concept, or follow a reading path.{" "}
+            <strong>Map</strong> shows the hierarchy;{" "}
+            <strong>Connections</strong> puts one concept between what informs
+            it and what it affects. <strong>List</strong> lets you browse
+            without moving the canvas.
+          </p>
+          <p>
+            Drag empty space to pan. Use + / − to zoom, or pinch on touch
+            screens. With the canvas focused, arrow keys pan and Home fits the
+            map. Scrolling outside the canvas always scrolls the page; the mouse
+            wheel scrolls normally everywhere.
+          </p>
+        </div>
+      )}
+      <div className="atlas-toolbar">
+        <div className="atlas-search">
+          <Search size={17} aria-hidden="true" />
+          <input
+            ref={search_ref}
+            type="search"
+            aria-label="Search mortgage concepts"
+            placeholder="Find a concept, e.g. OAS or burnout"
+            value={query}
+            onChange={(e) => {
+              set_query(e.target.value);
+              set_search_open(true);
+              set_search_cursor(0);
+            }}
+            onFocus={() => set_search_open(true)}
+            onBlur={(e) => {
+              if (
+                !e.currentTarget.parentElement?.contains(
+                  e.relatedTarget as Node,
+                )
+              )
+                set_search_open(false);
+            }}
+            onKeyDown={search_keys}
+            aria-controls="atlas-search-results"
+          />
+          {search_open && query && (
+            <div
+              className="atlas-search-results"
+              id="atlas-search-results"
+              aria-label="Search results"
+            >
+              <output className="atlas-result-count">
+                {results.length
+                  ? "Matching concepts"
+                  : "No match. Try a shorter term, such as “rate”."}
+              </output>
+              {results.map((node, index) => (
+                <button
+                  key={node.id}
+                  className={index === search_cursor ? "is-current" : ""}
+                  onClick={(e) => choose_concept(node.id, e.currentTarget)}
+                >
+                  <span>{node.title}</span>
+                  <small>
+                    {branch_index.get(node.branch)?.title} /{" "}
+                    {topic_index.get(node.topic)?.title}
+                  </small>
+                  <ArrowUpRight size={15} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="atlas-view-toggle" aria-label="Reading view">
+          <button aria-pressed={view === "map"} onClick={() => set_view("map")}>
+            <Network size={16} />
+            <span>Map</span>
+          </button>
+          <button
+            aria-pressed={view === "connections"}
+            onClick={() => {
+              if (!selected) set_selected("prepayments");
+              set_view("connections");
+            }}
+          >
+            <ArrowRight size={16} />
+            <span>Connections</span>
+          </button>
+          <button
+            aria-pressed={view === "list"}
+            onClick={() => set_view("list")}
+          >
+            <List size={16} />
+            <span>List</span>
+          </button>
+        </div>
+      </div>
+      <div className="atlas-options">
+        <div className="atlas-depth" aria-label="Map detail level">
+          <Layers size={15} aria-hidden="true" />
+          {["Overview", "Topics", "All concepts"].map((label, i) => (
+            <button
+              key={label}
+              aria-pressed={depth === i && view === "map"}
+              onClick={() => {
+                set_view("map");
+                set_depth(i);
+                set_topic_filter("all");
+                set_selected(null);
+                set_reader_open(false);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <label className="atlas-domain-select">
+          <span>Focus</span>
+          <select
+            value={branch_filter}
+            onChange={(e) => {
+              const id = e.target.value;
+              set_branch_filter(id);
+              set_topic_filter("all");
+              set_selected(null);
+              set_reader_open(false);
+              if (view !== "list") set_view("map");
+              if (id !== "all") set_depth(1);
+            }}
+            aria-label="Focus a domain"
+          >
+            <option value="all">All domains</option>
+            {mortgage_branches.map((branch) => (
+              <option value={branch.id} key={branch.id}>
+                {branch.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div
+        className={`atlas-workspace ${reader_open && concept ? "has-reader" : ""}`}
+      >
+        <div className="atlas-map-column">
+          {view === "list" ? (
+            <div
+              className="atlas-list"
+              aria-label="Mortgage concepts by domain and topic"
+            >
+              {mortgage_branches
+                .filter(
+                  (b) => branch_filter === "all" || b.id === branch_filter,
+                )
+                .map((branch) => (
+                  <section key={branch.id} className="atlas-list-domain">
+                    <header>
+                      <span>{branch.number}</span>
+                      <h2>{branch.title}</h2>
+                      <p>{branch.question}</p>
+                    </header>
+                    {visible_topics
+                      .filter((t) => t.branch === branch.id)
+                      .map((topic) => (
+                        <div className="atlas-list-topic" key={topic.id}>
+                          <h3>{topic.title}</h3>
+                          <div>
+                            {topic.concepts.map((id) => {
+                              const node = concept_index.get(id)!;
+                              return (
+                                <button
+                                  key={id}
+                                  aria-pressed={selected === id}
+                                  onClick={(e) =>
+                                    choose_concept(id, e.currentTarget)
+                                  }
+                                >
+                                  <span>{node.title}</span>
+                                  <small>{node.subtitle}</small>
+                                  <ArrowUpRight size={15} />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                  </section>
+                ))}
+            </div>
+          ) : (
+            <div
+              ref={canvas_ref}
+              className={`atlas-canvas ${is_dragging ? "is-dragging" : ""}`}
+              role="application"
+              aria-roledescription="interactive map"
+              aria-label="Mortgage map canvas. Arrow keys pan, plus and minus zoom, Home fits the map."
+              tabIndex={0}
+              onKeyDown={key_canvas}
+              onPointerDown={pointer_down}
+              onPointerMove={pointer_move}
+              onPointerUp={pointer_up}
+              onPointerCancel={pointer_up}
+            >
+              <div className="atlas-canvas-caption">
+                <span>
+                  {view === "connections"
+                    ? "CONNECTION STUDY"
+                    : branch_filter === "all"
+                      ? "THE WHOLE PICTURE"
+                      : topic_filter === "all"
+                        ? "DOMAIN STUDY"
+                        : "TOPIC STUDY"}
+                </span>
+                <p>
+                  {view === "connections"
+                    ? concept?.title
+                    : branch_filter === "all"
+                      ? depth === 0
+                        ? "Eight ways into one subject"
+                        : depth === 1
+                          ? "A closer look at the topics"
+                          : "Follow the branches. Find the connections."
+                      : topic_filter === "all"
+                        ? branch_index.get(branch_filter)?.title
+                        : topic_index.get(topic_filter)?.title}
+                </p>
+                {camera.scale < 0.55 && (
+                  <small className="atlas-scale-hint">
+                    Zoom in to read, or switch to List.
+                  </small>
+                )}
+              </div>
+              <div
+                className="atlas-world"
+                style={{
+                  transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
+                }}
+              >
+                <svg className="atlas-edges" aria-hidden="true">
+                  <defs>
+                    <marker
+                      id="atlas-arrow"
+                      markerWidth="8"
+                      markerHeight="8"
+                      refX="7"
+                      refY="4"
+                      orient="auto"
+                    >
+                      <path d="M 0 0 L 8 4 L 0 8 z" fill="currentColor" />
+                    </marker>
+                  </defs>
+                  {graph
+                    .filter((node) => node.parent)
+                    .map((node) => (
+                      <path
+                        key={`${node.parent}-${node.id}`}
+                        className={`atlas-tree-edge ${selected ? "is-muted" : ""}`}
+                        d={edge_path(positions.get(node.parent!)!, node)}
+                      />
+                    ))}
+                  {active_edges.map((edge) => {
+                    const source = positions.get(edge.source)!;
+                    const target = positions.get(edge.target)!;
+                    const x = (source.x + target.x) / 2;
+                    const y = (source.y + target.y) / 2;
+                    return (
+                      <g
+                        key={edge.id}
+                        className={`atlas-relation ${edge.kind === "comparison" ? "is-comparison" : ""}`}
+                      >
+                        <title>{`${source.title} → ${target.title}: ${edge.reason}`}</title>
+                        <path
+                          d={edge_path(source, target)}
+                          markerEnd="url(#atlas-arrow)"
+                        />
+                        {view === "connections" && (
+                          <g transform={`translate(${x}, ${y})`}>
+                            <rect
+                              x={-112}
+                              y={-12}
+                              width={224}
+                              height={24}
+                              rx={12}
+                            />
+                            <text
+                              textAnchor="middle"
+                              dominantBaseline="central"
+                            >
+                              {edge.label}
+                            </text>
+                          </g>
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+                {graph.map((node) => (
+                  <button
+                    key={node.id}
+                    className={`atlas-node node-${node.kind} ${selected === node.id ? "is-selected" : ""} ${selected && neighbors.has(node.id) ? "is-neighbor" : ""} ${selected && view === "map" && node.kind === "concept" && !neighbors.has(node.id) ? "is-dimmed" : ""}`}
+                    data-node-id={node.id}
+                    data-branch={node.branch}
+                    style={{
+                      left: node.x - node.width / 2,
+                      top: node.y - node.height / 2,
+                      width: node.width,
+                      height: node.height,
+                    }}
+                    onClick={(e) => activate_node(node, e.currentTarget)}
+                    onFocus={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const frame = canvas_ref.current?.getBoundingClientRect();
+                      if (
+                        frame &&
+                        (rect.left < frame.left ||
+                          rect.right > frame.right ||
+                          rect.top < frame.top ||
+                          rect.bottom > frame.bottom)
+                      )
+                        set_camera((c) => ({
+                          ...c,
+                          x: size.width / 2 - node.x * c.scale,
+                          y: size.height / 2 - node.y * c.scale,
+                        }));
+                    }}
+                    aria-label={
+                      node.kind === "root"
+                        ? "Return to the whole map"
+                        : node.kind === "branch" || node.kind === "topic"
+                          ? `Explore ${node.title}`
+                          : `Read ${node.title}`
+                    }
+                    aria-pressed={
+                      node.kind === "concept" ? selected === node.id : undefined
+                    }
+                  >
+                    {node.kind === "root" ? (
+                      <>
+                        <span className="atlas-node-eyebrow">
+                          A CONNECTED FIELD GUIDE
+                        </span>
+                        <strong>
+                          Mortgage <em>Map.</em>
+                        </strong>
+                        <small>One subject. Many moving parts.</small>
+                      </>
+                    ) : (
+                      <>
+                        {node.kind === "branch" && (
+                          <span className="atlas-node-number">
+                            {branch_index.get(node.id)?.number}
+                          </span>
+                        )}
+                        <strong>{node.title}</strong>
+                        <small>{node.subtitle}</small>
+                        {node.kind === "branch" && (
+                          <span className="atlas-branch-count">
+                            {
+                              mortgage_topics.filter(
+                                (t) => t.branch === node.id,
+                              ).length
+                            }{" "}
+                            topics ·{" "}
+                            {
+                              mortgage_concepts.filter(
+                                (c) => c.branch === node.id,
+                              ).length
+                            }{" "}
+                            concepts <ArrowUpRight size={12} />
+                          </span>
+                        )}
+                        {node.kind === "topic" && (
+                          <Plus className="atlas-node-expand" size={14} />
+                        )}
+                      </>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="atlas-canvas-bottom">
+                <div className="atlas-zoom" aria-label="Map navigation">
+                  <button
+                    aria-label="Zoom out"
+                    title="Zoom out"
+                    onClick={() =>
+                      set_camera((c) =>
+                        zoom_camera(c, 0.8, size.width / 2, size.height / 2),
+                      )
+                    }
+                  >
+                    <Minus size={18} />
+                  </button>
+                  <span aria-live="polite">
+                    {Math.round(camera.scale * 100)}%
+                  </span>
+                  <button
+                    aria-label="Zoom in"
+                    title="Zoom in"
+                    onClick={() =>
+                      set_camera((c) =>
+                        zoom_camera(c, 1.25, size.width / 2, size.height / 2),
+                      )
+                    }
+                  >
+                    <Plus size={18} />
+                  </button>
+                  <span className="atlas-control-divider" />
+                  <button
+                    aria-label="Fit map"
+                    title="Fit map"
+                    onClick={() =>
+                      set_camera(fit_camera(bounds, size.width, size.height))
+                    }
+                  >
+                    <Maximize2 size={17} />
+                  </button>
+                  <button
+                    aria-label="Focus selected concept"
+                    title="Focus selected concept"
+                    disabled={!selected || !positions.has(selected)}
+                    onClick={focus_selected}
+                  >
+                    <Focus size={18} />
+                  </button>
+                </div>
+                <span className="atlas-pan-hint">
+                  Drag to explore · + / − to zoom
+                </span>
+              </div>
+              <button
+                className="atlas-minimap"
+                aria-label="Recenter map at a point in the overview"
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const sx = bounds.width / rect.width;
+                  const sy = bounds.height / rect.height;
+                  const x = bounds.x + (event.clientX - rect.left) * sx;
+                  const y = bounds.y + (event.clientY - rect.top) * sy;
+                  if (event.detail === 0)
+                    set_camera(fit_camera(bounds, size.width, size.height));
+                  else
+                    set_camera((c) => ({
+                      ...c,
+                      x: size.width / 2 - x * c.scale,
+                      y: size.height / 2 - y * c.scale,
+                    }));
+                }}
+              >
+                <svg
+                  viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  {graph.map((n) => (
+                    <rect
+                      key={n.id}
+                      x={n.x - n.width / 2}
+                      y={n.y - n.height / 2}
+                      width={n.width}
+                      height={n.height}
+                      className={n.id === selected ? "is-selected" : ""}
+                    />
+                  ))}
+                  <rect
+                    className="atlas-viewport"
+                    x={-camera.x / camera.scale}
+                    y={-camera.y / camera.scale}
+                    width={size.width / camera.scale}
+                    height={size.height / camera.scale}
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+          <div className="atlas-legend">
+            <span>
+              <i />
+              Hierarchy
+            </span>
+            <span>
+              <i className="relationship-key" />
+              Directed relationship
+            </span>
+            <span>
+              <i className="comparison-key" />
+              Comparison
+            </span>
+            <button onClick={overview}>
+              Back to overview <ArrowUpRight size={13} />
+            </button>
+          </div>
+        </div>
+        {reader_open && concept && (
+          <aside
+            className="atlas-reader"
+            ref={reader_ref}
+            aria-label="Concept reader"
+          >
+            <div className="atlas-reader-top">
+              <span>
+                {branch_index.get(concept.branch)?.number} /{" "}
+                {branch_index.get(concept.branch)?.title}
+              </span>
+              <button onClick={close_reader} aria-label="Close concept reader">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="atlas-reader-topic">
+              {topic_index.get(concept.topic)?.title}
+            </p>
+            <h2 tabIndex={-1}>{concept.title}</h2>
+            <p className="atlas-reader-subtitle">{concept.subtitle}</p>
+            <p className="atlas-reader-summary">{concept.summary}</p>
+            {concept.formula && (
+              <div className="atlas-formula">
+                <span>THE RELATIONSHIP</span>
+                <p>{concept.formula.expression}</p>
+                <small>{concept.formula.assumptions}</small>
+                {concept.formula.example && (
+                  <p className="atlas-formula-example">
+                    {concept.formula.example}
+                  </p>
+                )}
+              </div>
+            )}
+            <div className="atlas-distinction">
+              <span>KEEP THIS DISTINCTION</span>
+              <p>{concept.distinction}</p>
+            </div>
+            {relations.length > 0 && (
+              <section className="atlas-reader-relations">
+                <div className="atlas-section-heading">
+                  <h3>How it connects</h3>
+                  <button
+                    className="atlas-text-button"
+                    onClick={() => set_view("connections")}
+                  >
+                    See on map <Network size={14} />
+                  </button>
+                </div>
+                {(["incoming", "outgoing"] as const).map((direction) => {
+                  const entries = relations.filter((e) =>
+                    direction === "incoming"
+                      ? e.target === selected
+                      : e.source === selected,
+                  );
+                  return (
+                    entries.length > 0 && (
+                      <div key={direction}>
+                        <p className="atlas-relation-direction">
+                          {direction === "incoming"
+                            ? "← Leads into this concept"
+                            : "→ Follow the connection"}
+                        </p>
+                        {entries.map((edge) => {
+                          const other =
+                            direction === "incoming"
+                              ? edge.source
+                              : edge.target;
+                          return (
+                            <button
+                              className="atlas-related"
+                              key={edge.id}
+                              onClick={(e) =>
+                                choose_concept(other, e.currentTarget)
+                              }
+                            >
+                              <span>
+                                {concept_index.get(other)?.title}
+                                <ArrowUpRight size={14} />
+                              </span>
+                              <small>
+                                {direction === "incoming"
+                                  ? `${concept_index.get(other)?.title} → ${concept.title}`
+                                  : `${concept.title} → ${concept_index.get(other)?.title}`}
+                              </small>
+                              <p>{edge.reason}</p>
+                              <em>{edge.kind}</em>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )
+                  );
+                })}
+              </section>
+            )}
+            <details className="atlas-check">
+              <summary>
+                Check your understanding <ChevronDown size={15} />
+              </summary>
+              <p>
+                <strong>{concept.question}</strong>
+              </p>
+              <p>{concept.answer}</p>
+            </details>
+            <details className="atlas-further">
+              <summary>
+                Related reading <ChevronDown size={15} />
+              </summary>
+              {concept.links.map((link) => (
+                <button
+                  key={link.id}
+                  onClick={(e) => choose_concept(link.id, e.currentTarget)}
+                >
+                  <span>
+                    {concept_index.get(link.id)?.title}{" "}
+                    <ArrowUpRight size={13} />
+                  </span>
+                  <small>{link.reason}</small>
+                </button>
+              ))}
+            </details>
+            <section className="atlas-sources">
+              <h3>Read the source</h3>
+              {concept.sources.map((id) => {
+                const source = mortgage_sources[id];
                 return (
-                  <AccordionItem key={item.id} value={item.id} className={`map-branch map-branch-${index + 1}`}>
-                    <AccordionTrigger className="map-branch-trigger" data-map-branch={item.id}>
-                      <span><span className="map-branch-number">0{index + 1}</span><strong>{item.title}</strong><small>{item.question}</small></span>
-                    </AccordionTrigger>
-                    <AccordionContent className="map-branch-content">
-                      <ul className="map-node-list">
-                        {nodes.map((node) => <li key={node.id}><button type="button" data-concept-id={node.id} aria-pressed={node.id === selected} aria-controls="concept-detail" onClick={() => select_concept(node.id)}><span>{node.title}</span><small>{node.subtitle}</small></button></li>)}
-                      </ul>
-                      {!nodes.length && <p className="map-no-match">No matches in this branch.</p>}
-                    </AccordionContent>
-                  </AccordionItem>
+                  <a
+                    key={id}
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <span>
+                      {source.publisher}
+                      <ArrowUpRight size={14} />
+                    </span>
+                    <small>{source.title}</small>
+                  </a>
                 );
               })}
-            </Accordion>
-          </div>
-          {search_term && !matches.length && <p className="map-empty">No concept found. Try “prepayment”, “WAL” or “TBA”, or clear the search.</p>}
-          <div className="map-learning-path">
-            <p className="map-label">FOLLOW ONE IDEA</p>
-            <p>How does a borrower’s decision become an investor’s risk?</p>
-            <ol>{learning_path.map((step, index) => <li key={step.id}><button type="button" onClick={() => select_concept(step.id)}>{concept_title(step.id)}</button>{index < learning_path.length - 1 && <span><ArrowDown size={14} aria-hidden="true" /> {step.connection}</span>}</li>)}</ol>
-          </div>
-        </section>
-        <article className="map-detail" id="concept-detail" aria-labelledby="concept-title" tabIndex={-1} ref={detail_ref}>
-          <p className="map-label">{branch.title}</p>
-          <h2 id="concept-title">{concept.title}</h2>
-          <p className="map-detail-subtitle">{concept.subtitle}</p>
-          <p className="map-summary">{concept.summary}</p>
-          {concept.formula && <div className="map-formula"><h3>The calculation</h3><code>{concept.formula.expression}</code><p>{concept.formula.assumptions}</p>{concept.formula.example && <p><strong>Illustrative example.</strong> {concept.formula.example}</p>}</div>}
-          <div className="map-caution"><h3>Keep the distinction</h3><p>{concept.distinction}</p></div>
-          <div className="map-related"><h3>Connect it</h3><ul>{concept.links.map((link) => <li key={link.id}><button type="button" onClick={() => select_concept(link.id)}>{concept_title(link.id)} <ArrowUpRight size={15} aria-hidden="true" /></button><p>{link.reason}</p></li>)}</ul></div>
-          <details className="map-check" key={concept.id}><summary>Check your understanding</summary><p>{concept.question}</p><details><summary>Show the reasoning</summary><p>{concept.answer}</p></details></details>
-          <div className="map-references"><h3>Read the source</h3><ul>{concept.sources.map((id) => <li key={id}><a href={mortgage_sources[id].url} target="_blank" rel="noreferrer">{mortgage_sources[id].publisher} <ArrowUpRight size={14} aria-hidden="true" /><span>{mortgage_sources[id].title}</span></a></li>)}</ul></div>
-          <button type="button" onClick={return_to_map} className="map-return">Back to the map ↑</button>
-        </article>
+            </section>
+          </aside>
+        )}
       </div>
-    </div>
+      <div className="atlas-paths">
+        <div className="atlas-path-heading">
+          <div>
+            <span className="atlas-kicker">FOLLOW A THREAD</span>
+            <h2>Start with a question.</h2>
+          </div>
+          <label>
+            <span className="sr-only">Choose a reading path</span>
+            <select
+              aria-label="Choose a reading path"
+              value={path_id}
+              onChange={(e) => choose_path(e.target.value)}
+            >
+              <option value="">Choose a reading path</option>
+              {mortgage_paths.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {path ? (
+          <div className="atlas-active-path">
+            <p>{path.description}</p>
+            <ol>
+              {path.steps.map((id, index) => (
+                <li key={id}>
+                  <button
+                    aria-current={selected === id ? "step" : undefined}
+                    onClick={(e) => {
+                      set_view("connections");
+                      choose_concept(id, e.currentTarget);
+                    }}
+                  >
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    {concept_index.get(id)?.title}
+                    {selected === id && <Check size={14} />}
+                  </button>
+                  {index < path.steps.length - 1 && (
+                    <ArrowRight size={14} aria-hidden="true" />
+                  )}
+                </li>
+              ))}
+            </ol>
+            <div className="atlas-path-controls">
+              <button
+                disabled={path.steps.indexOf(selected ?? "") <= 0}
+                onClick={() =>
+                  choose_concept(path.steps[path.steps.indexOf(selected!) - 1])
+                }
+              >
+                <ArrowLeft size={15} />
+                Previous step
+              </button>
+              <button
+                disabled={
+                  path.steps.indexOf(selected ?? "") < 0 ||
+                  path.steps.indexOf(selected ?? "") >= path.steps.length - 1
+                }
+                onClick={() =>
+                  choose_concept(path.steps[path.steps.indexOf(selected!) + 1])
+                }
+              >
+                Next step
+                <ArrowRight size={15} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="atlas-path-cards">
+            {mortgage_paths.map((item, index) => (
+              <button key={item.id} onClick={() => choose_path(item.id)}>
+                <span>
+                  PATH {String(index + 1).padStart(2, "0")}{" "}
+                  <ArrowUpRight size={16} />
+                </span>
+                <strong>{item.title}</strong>
+                <small>{item.description}</small>
+                <em>{item.steps.length} connected concepts</em>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
