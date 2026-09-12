@@ -882,8 +882,6 @@ footer h2 {
   letter-spacing: 0.12em;
   line-height: 1.8;
 }
-.footer-lab-link { grid-column: 1 / -1; justify-self: start; min-height: 44px; display: flex; align-items: center; font-size: 16px; text-decoration: underline; text-underline-offset: 5px; }
-.footer-lab-link:focus-visible { outline-color: #f7eed8; }
 .mini-player {
   position: fixed;
   z-index: 80;

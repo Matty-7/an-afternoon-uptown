@@ -66,5 +66,5 @@ test('RSS carries one external link with no prose; sitemap lists only internal l
     '@/lib/seo': { absoluteUrl: (path) => `https://www.jinghenghuan.com${path}` },
   });
   assert.equal(JSON.stringify(sitemap.default().map((entry) => entry.url)),
-    JSON.stringify(['https://www.jinghenghuan.com/', 'https://www.jinghenghuan.com/journal', 'https://www.jinghenghuan.com/lab/mortgage']));
+    JSON.stringify(['https://www.jinghenghuan.com/', 'https://www.jinghenghuan.com/journal']));
 });
