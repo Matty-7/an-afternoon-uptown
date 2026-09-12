@@ -19,12 +19,12 @@ export default function MortgageMapPage() {
         <Link href="/#portfolio">← Portfolio</Link>
       </nav>
       <header className="map-header">
-        <p className="eyebrow">PORTFOLIO / A CONNECTED READING GUIDE</p>
+        <p className="eyebrow">PORTFOLIO / AN INTERACTIVE FIELD GUIDE</p>
         <h1>Mortgage <em>Map.</em></h1>
-        <p>From one home loan to the securities built around it. Open a branch, then follow the connections.</p>
+        <p>From a borrower’s decision to a bond’s cash flows, price and risk. Explore the branches, then follow what connects them.</p>
       </header>
       <MortgageMap />
-      <p className="map-scope">A learning map of U.S. residential mortgages and MBS. Original summaries link to public references; examples are illustrative. No market quotes or investment recommendations.</p>
+      <p className="map-scope">An evolving guide to mortgages, MBS and the ideas around them, including commercial property and structured credit. Original explanations link to public references. Relationships describe mechanisms under stated conditions; examples are illustrative.</p>
     </main>
   );
 }

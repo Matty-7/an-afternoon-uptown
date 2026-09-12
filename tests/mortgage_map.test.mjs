@@ -47,3 +47,85 @@ test('the knowledge graph has no disconnected cluster, including cross-branch le
     )), `${branch.id} must connect to the wider subject`);
   }
 });
+
+import { mortgage_topics, mortgage_relationships, mortgage_paths } from '../content/mortgage_concepts.ts';
+import { build_mortgage_graph, build_connection_graph, graph_bounds, fit_camera, zoom_camera, search_concepts } from '../lib/mortgage_graph.ts';
+
+test('four-level hierarchy owns each concept once and never overlaps nodes at any depth', () => {
+  const assigned = mortgage_topics.flatMap((t) => t.concepts);
+  assert.equal(new Set(assigned).size, mortgage_concepts.length);
+  assert.equal(assigned.length, mortgage_concepts.length);
+  for (const concept of mortgage_concepts) {
+    const topic = mortgage_topics.find((t) => t.id === concept.topic);
+    assert.equal(topic?.branch, concept.branch);
+    assert.ok(topic.concepts.includes(concept.id));
+  }
+  for (const filter of ['all', ...mortgage_branches.map((b) => b.id)]) {
+    for (const depth of [0, 1, 2]) {
+      const nodes = build_mortgage_graph(depth, filter);
+      const ids = new Set(nodes.map((n) => n.id));
+      assert.equal(ids.size, nodes.length);
+      for (const node of nodes) {
+        if (node.parent) assert.ok(ids.has(node.parent));
+        const parents = new Set([node.id]);
+        let parent = node.parent;
+        while (parent) { assert.ok(!parents.has(parent)); parents.add(parent); parent = nodes.find((n) => n.id === parent)?.parent; }
+      }
+      for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        assert.ok(Math.abs(a.x - b.x) >= (a.width + b.width) / 2 || Math.abs(a.y - b.y) >= (a.height + b.height) / 2, `${filter}/${depth}: ${a.id} overlaps ${b.id}`);
+      }
+    }
+  }
+  assert.equal(build_mortgage_graph(2).filter((n) => n.kind === 'concept').length, mortgage_concepts.length);
+});
+
+test('analytical edges are explicit, typed and connected across every domain', () => {
+  const index = new Map(mortgage_concepts.map((n) => [n.id, n]));
+  assert.equal(new Set(mortgage_relationships.map((e) => e.id)).size, mortgage_relationships.length);
+  for (const edge of mortgage_relationships) {
+    assert.ok(index.has(edge.source) && index.has(edge.target));
+    assert.notEqual(edge.source, edge.target);
+    assert.ok(edge.label && edge.reason.length > 30);
+    assert.ok(['mechanism', 'definition', 'measurement', 'comparison'].includes(edge.kind));
+  }
+  const cross = mortgage_relationships.filter((e) => index.get(e.source).branch !== index.get(e.target).branch);
+  assert.ok(cross.length >= 24);
+  for (const branch of mortgage_branches) assert.ok(cross.some((e) => index.get(e.source).branch === branch.id || index.get(e.target).branch === branch.id));
+  for (const path of mortgage_paths) {
+    assert.ok(path.steps.length >= 4);
+    for (let i = 1; i < path.steps.length; i++) assert.ok(mortgage_relationships.some((e) =>
+      (e.source === path.steps[i - 1] && e.target === path.steps[i]) || (e.target === path.steps[i - 1] && e.source === path.steps[i])), `${path.id}: missing explanation for ${path.steps[i - 1]} / ${path.steps[i]}`);
+  }
+});
+
+test('connection studies expose every endpoint and keep cards apart', () => {
+  for (const selected of mortgage_concepts) {
+    const nodes = build_connection_graph(selected.id);
+    const ids = new Set(nodes.map((n) => n.id));
+    for (const edge of mortgage_relationships.filter((e) => e.source === selected.id || e.target === selected.id)) assert.ok(ids.has(edge.source) && ids.has(edge.target));
+    assert.equal(ids.size, nodes.length);
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+      assert.ok(Math.abs(nodes[i].x - nodes[j].x) >= 250 || Math.abs(nodes[i].y - nodes[j].y) >= 80);
+    }
+  }
+});
+
+test('search prioritizes exact terms and camera math preserves the zoom anchor', () => {
+  assert.equal(search_concepts('  OAS ')[0].id, 'oas');
+  assert.equal(search_concepts('weighted average loan age')[0].id, 'wala');
+  assert.equal(search_concepts('no matching mortgage phrase').length, 0);
+  assert.equal(search_concepts('').length, 0);
+  const camera = { x: 150, y: 240, scale: 0.6 };
+  const zoomed = zoom_camera(camera, 1.25, 430, 320);
+  assert.ok(Math.abs((430 - camera.x) / camera.scale - (430 - zoomed.x) / zoomed.scale) < 1e-9);
+  assert.ok(Math.abs((320 - camera.y) / camera.scale - (320 - zoomed.y) / zoomed.scale) < 1e-9);
+  assert.equal(zoom_camera(camera, 100, 0, 0).scale, 2);
+  assert.equal(zoom_camera(camera, 0.001, 0, 0).scale, 0.07);
+  for (const [width, height] of [[1200, 650], [356, 440]]) {
+    const bounds = graph_bounds(build_mortgage_graph(2));
+    const fit = fit_camera(bounds, width, height);
+    assert.ok(bounds.width * fit.scale <= width);
+    assert.ok(bounds.height * fit.scale <= height);
+  }
+});
