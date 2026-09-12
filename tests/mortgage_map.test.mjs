@@ -129,3 +129,51 @@ test('search prioritizes exact terms and camera math preserves the zoom anchor',
     assert.ok(bounds.height * fit.scale <= height);
   }
 });
+
+import { atlas_comparisons } from '../content/atlas_extensions.ts';
+import { render_mortgage_math, mortgage_math } from '../lib/mortgage_math.ts';
+import { study_edges, connection_route } from '../lib/mortgage_graph.ts';
+
+test('all displayed formulas render strict TeX with accessible MathML and variable definitions', () => {
+  const rendered = render_mortgage_math();
+  for (const c of mortgage_concepts.filter(c => c.formula)) {
+    assert.ok(mortgage_math[c.id].variables.length > 25, c.id);
+    assert.match(rendered[c.id].html, /<math /, c.id);
+    assert.match(rendered[c.id].html, /<annotation encoding="application\/x-tex">/, c.id);
+    assert.doesNotMatch(rendered[c.id].html, /katex-error/, c.id);
+  }
+  assert.match(rendered.pv.html, /mfrac/);
+  assert.match(rendered.cpr.html, /msup/);
+  assert.match(rendered.duration.html, /mfrac/);
+  assert.match(rendered.oas.html, /mathbb/);
+  assert.ok(Math.abs((1 - (1 - .06) ** (1/12)) * 100 - .5143) < .0001);
+  assert.equal((100.4-99.6)/(2*100*.001), 4.000000000000057);
+});
+
+test('comparison rows are complete, navigable, and cover the important independent dimensions', () => {
+  const ids = new Set(mortgage_concepts.map(c => c.id));
+  for (const set of atlas_comparisons) {
+    assert.equal(new Set(set.rows.map(r => r.id)).size, set.rows.length);
+    for (const row of set.rows) { assert.ok(ids.has(row.id)); assert.equal(row.cells.length,set.columns.length); assert.ok(row.cells.every(Boolean)); }
+  }
+  for (const id of ['g_spread','i_spread','z_spread','oas','asset_swap','discount_margin','quoted_margin']) assert.ok(atlas_comparisons[0].rows.some(r => r.id === id));
+  for (const id of ['rmbs','cmbs','abs','clo','crt','covered_bonds']) assert.equal(search_concepts(id)[0].id,id);
+  assert.match(atlas_comparisons.find(c=>c.id==='currencies').rows.find(r=>r.id==='cny_rates').cells.join(' '),/seven-day/);
+});
+
+test('each connection study has one line per neighbor and label lanes clear every card', () => {
+  for (const c of mortgage_concepts) {
+    const nodes=build_connection_graph(c.id), index=new Map(nodes.map(n=>[n.id,n]));
+    const edges=study_edges(c.id);
+    const neighbors=edges.map(e=>e.source===c.id?e.target:e.source);
+    assert.equal(new Set(neighbors).size,neighbors.length,c.id);
+    const labels=[];
+    for (const e of edges) {
+      const route=connection_route(index.get(e.source),index.get(e.target));
+      assert.ok(!/NaN|undefined/.test(route.path));
+      for (const node of nodes) assert.ok(Math.abs(route.x-node.x)>=108+node.width/2 || Math.abs(route.y-node.y)>=12+node.height/2,`${c.id}: ${e.id} label intersects ${node.id}`);
+      for(const other of labels) assert.ok(Math.abs(route.x-other.x)>=216 || Math.abs(route.y-other.y)>=24,`${c.id} label collision`);
+      labels.push(route);
+    }
+  }
+});

@@ -1,3 +1,11 @@
+import {
+  atlas_branches,
+  atlas_topics,
+  atlas_sources,
+  atlas_concepts,
+  atlas_relationships,
+  atlas_paths,
+} from './atlas_extensions.ts';
 // Original public educational summaries. No employer data or implementation details.
 export type MortgageConcept = {
   id: string;
@@ -20,406 +28,420 @@ export type MortgageRelationship = {
   target: string;
   label: string;
   reason: string;
-  kind: "mechanism" | "definition" | "measurement" | "comparison";
+  kind: 'mechanism' | 'definition' | 'measurement' | 'comparison';
 };
 
 export const mortgage_branches = [
   {
-    id: "basics",
-    title: "Loans & pools",
-    question: "What is actually being financed?",
-    number: "01",
+    id: 'basics',
+    title: 'Loans & pools',
+    question: 'What is actually being financed?',
+    number: '01',
   },
   {
-    id: "prepayment",
-    title: "Prepayment",
-    question: "Why does principal come back early?",
-    number: "02",
+    id: 'prepayment',
+    title: 'Prepayment',
+    question: 'Why does principal come back early?',
+    number: '02',
   },
   {
-    id: "trading",
-    title: "Markets & trading",
-    question: "What changes hands, and at what price?",
-    number: "03",
+    id: 'trading',
+    title: 'Markets & trading',
+    question: 'What changes hands, and at what price?',
+    number: '03',
   },
   {
-    id: "valuation",
-    title: "Cash flows & value",
-    question: "How does future money become today’s value?",
-    number: "04",
+    id: 'valuation',
+    title: 'Cash flows & value',
+    question: 'How does future money become today’s value?',
+    number: '04',
   },
   {
-    id: "curves",
-    title: "Curves & spreads",
-    question: "Which rate, which curve, which comparison?",
-    number: "05",
+    id: 'curves',
+    title: 'Curves & spreads',
+    question: 'Which rate, which curve, which comparison?',
+    number: '05',
   },
   {
-    id: "risk",
-    title: "Risk & hedging",
-    question: "What changes when the world changes?",
-    number: "06",
+    id: 'risk',
+    title: 'Risk & hedging',
+    question: 'What changes when the world changes?',
+    number: '06',
   },
   {
-    id: "structure",
-    title: "CMO & structures",
-    question: "Who receives the cash, and who absorbs the change?",
-    number: "07",
+    id: 'structure',
+    title: 'CMO & structures',
+    question: 'Who receives the cash, and who absorbs the change?',
+    number: '07',
   },
   {
-    id: "credit",
-    title: "Credit & property",
-    question: "Can the underlying borrower repay?",
-    number: "08",
+    id: 'credit',
+    title: 'Credit & property',
+    question: 'Can the underlying borrower repay?',
+    number: '08',
+  },
+  ...atlas_branches,
+];
+
+const original_topics = [
+  {
+    id: 'loan_contract',
+    branch: 'basics',
+    title: 'The loan contract',
+    concepts: ['principal_interest', 'amortization', 'fixed_arm', 'balloon'],
+  },
+  {
+    id: 'pool_profile',
+    branch: 'basics',
+    title: 'Reading the collateral',
+    concepts: ['pool_averages', 'wac', 'wam', 'wala', 'loan_balance'],
+  },
+  {
+    id: 'pool_accounting',
+    branch: 'basics',
+    title: 'From borrower to investor',
+    concepts: ['pool_factor', 'servicing', 'net_coupon'],
+  },
+  {
+    id: 'speed',
+    branch: 'prepayment',
+    title: 'Measuring a speed',
+    concepts: ['prepayments', 'smm', 'cpr', 'psa'],
+  },
+  {
+    id: 'refinancing',
+    branch: 'prepayment',
+    title: 'The refinancing decision',
+    concepts: ['incentive', 'frictions', 'burnout', 'lock_in'],
+  },
+  {
+    id: 'other_paydowns',
+    branch: 'prepayment',
+    title: 'More than refinancing',
+    concepts: ['turnover', 'curtailment', 'seasonality', 'buyouts'],
+  },
+  {
+    id: 'guarantees',
+    branch: 'trading',
+    title: 'Issuance & guarantees',
+    concepts: ['pass_through', 'agency', 'ginnie', 'non_agency'],
+  },
+  {
+    id: 'pool_selection',
+    branch: 'trading',
+    title: 'Generic versus specific',
+    concepts: ['tba', 'specified', 'pay_up', 'cheapest_deliverable'],
+  },
+  {
+    id: 'market_mechanics',
+    branch: 'trading',
+    title: 'Delivery & financing',
+    concepts: ['settlement', 'rolls', 'liquidity'],
+  },
+  {
+    id: 'payment_timing',
+    branch: 'valuation',
+    title: 'Amounts and dates',
+    concepts: ['cash_flows', 'wal', 'final_maturity', 'payment_delay'],
+  },
+  {
+    id: 'discounting',
+    branch: 'valuation',
+    title: 'Discounting future money',
+    concepts: ['pv', 'discount_factor', 'yield', 'reinvestment'],
+  },
+  {
+    id: 'quotation',
+    branch: 'valuation',
+    title: 'What the price includes',
+    concepts: ['price', 'accrual', 'day_count', 'price_32nds'],
+  },
+  {
+    id: 'term_structure',
+    branch: 'curves',
+    title: 'A family of rates',
+    concepts: ['par_curve', 'spot_curve', 'forward_curve', 'tenor'],
+  },
+  {
+    id: 'benchmarks',
+    branch: 'curves',
+    title: 'Choosing a reference',
+    concepts: ['treasury', 'sofr', 'ois', 'benchmark_matching'],
+  },
+  {
+    id: 'spread_measures',
+    branch: 'curves',
+    title: 'What a spread holds fixed',
+    concepts: ['spreads', 'nominal_spread', 'z_spread', 'oas'],
+  },
+  {
+    id: 'sensitivities',
+    branch: 'risk',
+    title: 'Measuring exposure',
+    concepts: ['duration', 'macaulay', 'modified_duration', 'dv01', 'key_rate'],
+  },
+  {
+    id: 'embedded_option',
+    branch: 'risk',
+    title: 'The borrower’s option',
+    concepts: ['convexity', 'extension', 'contraction', 'volatility'],
+  },
+  {
+    id: 'hedge_choices',
+    branch: 'risk',
+    title: 'Managing a moving exposure',
+    concepts: [
+      'hedging',
+      'treasury_hedge',
+      'swap_hedge',
+      'basis_risk',
+      'model_risk',
+    ],
+  },
+  {
+    id: 'deal_rules',
+    branch: 'structure',
+    title: 'The rules of the deal',
+    concepts: ['cmo', 'remic', 'waterfall', 'seniority'],
+  },
+  {
+    id: 'principal_priority',
+    branch: 'structure',
+    title: 'Redirecting principal',
+    concepts: ['sequential', 'pac', 'support', 'z_class'],
+  },
+  {
+    id: 'cashflow_slices',
+    branch: 'structure',
+    title: 'Separating payment streams',
+    concepts: ['io_po', 'io', 'po', 'floater'],
+  },
+  {
+    id: 'loss_protection',
+    branch: 'structure',
+    title: 'Credit enhancement',
+    concepts: ['subordination', 'oc', 'ic'],
+  },
+  {
+    id: 'credit_events',
+    branch: 'credit',
+    title: 'From delinquency to loss',
+    concepts: ['delinquency', 'default', 'severity', 'recovery_lag'],
+  },
+  {
+    id: 'property_income',
+    branch: 'credit',
+    title: 'Property operating income',
+    concepts: ['rent_roll', 'occupancy', 'noi'],
+  },
+  {
+    id: 'debt_capacity',
+    branch: 'credit',
+    title: 'How much debt can it carry?',
+    concepts: ['dscr', 'ltv', 'cap_rate', 'debt_yield'],
+  },
+  {
+    id: 'refinance_exit',
+    branch: 'credit',
+    title: 'The maturity exit',
+    concepts: ['refinance_risk', 'cmbs', 'conduit_sasb'],
   },
 ];
 
 export const mortgage_topics = [
-  {
-    id: "loan_contract",
-    branch: "basics",
-    title: "The loan contract",
-    concepts: ["principal_interest", "amortization", "fixed_arm", "balloon"],
-  },
-  {
-    id: "pool_profile",
-    branch: "basics",
-    title: "Reading the collateral",
-    concepts: ["pool_averages", "wac", "wam", "wala", "loan_balance"],
-  },
-  {
-    id: "pool_accounting",
-    branch: "basics",
-    title: "From borrower to investor",
-    concepts: ["pool_factor", "servicing", "net_coupon"],
-  },
-  {
-    id: "speed",
-    branch: "prepayment",
-    title: "Measuring a speed",
-    concepts: ["prepayments", "smm", "cpr", "psa"],
-  },
-  {
-    id: "refinancing",
-    branch: "prepayment",
-    title: "The refinancing decision",
-    concepts: ["incentive", "frictions", "burnout", "lock_in"],
-  },
-  {
-    id: "other_paydowns",
-    branch: "prepayment",
-    title: "More than refinancing",
-    concepts: ["turnover", "curtailment", "seasonality", "buyouts"],
-  },
-  {
-    id: "guarantees",
-    branch: "trading",
-    title: "Issuance & guarantees",
-    concepts: ["pass_through", "agency", "ginnie", "non_agency"],
-  },
-  {
-    id: "pool_selection",
-    branch: "trading",
-    title: "Generic versus specific",
-    concepts: ["tba", "specified", "pay_up", "cheapest_deliverable"],
-  },
-  {
-    id: "market_mechanics",
-    branch: "trading",
-    title: "Delivery & financing",
-    concepts: ["settlement", "rolls", "liquidity"],
-  },
-  {
-    id: "payment_timing",
-    branch: "valuation",
-    title: "Amounts and dates",
-    concepts: ["cash_flows", "wal", "final_maturity", "payment_delay"],
-  },
-  {
-    id: "discounting",
-    branch: "valuation",
-    title: "Discounting future money",
-    concepts: ["pv", "discount_factor", "yield", "reinvestment"],
-  },
-  {
-    id: "quotation",
-    branch: "valuation",
-    title: "What the price includes",
-    concepts: ["price", "accrual", "day_count", "price_32nds"],
-  },
-  {
-    id: "term_structure",
-    branch: "curves",
-    title: "A family of rates",
-    concepts: ["par_curve", "spot_curve", "forward_curve", "tenor"],
-  },
-  {
-    id: "benchmarks",
-    branch: "curves",
-    title: "Choosing a reference",
-    concepts: ["treasury", "sofr", "ois", "benchmark_matching"],
-  },
-  {
-    id: "spread_measures",
-    branch: "curves",
-    title: "What a spread holds fixed",
-    concepts: ["spreads", "nominal_spread", "z_spread", "oas"],
-  },
-  {
-    id: "sensitivities",
-    branch: "risk",
-    title: "Measuring exposure",
-    concepts: ["duration", "macaulay", "modified_duration", "dv01", "key_rate"],
-  },
-  {
-    id: "embedded_option",
-    branch: "risk",
-    title: "The borrower’s option",
-    concepts: ["convexity", "extension", "contraction", "volatility"],
-  },
-  {
-    id: "hedge_choices",
-    branch: "risk",
-    title: "Managing a moving exposure",
-    concepts: [
-      "hedging",
-      "treasury_hedge",
-      "swap_hedge",
-      "basis_risk",
-      "model_risk",
-    ],
-  },
-  {
-    id: "deal_rules",
-    branch: "structure",
-    title: "The rules of the deal",
-    concepts: ["cmo", "remic", "waterfall", "seniority"],
-  },
-  {
-    id: "principal_priority",
-    branch: "structure",
-    title: "Redirecting principal",
-    concepts: ["sequential", "pac", "support", "z_class"],
-  },
-  {
-    id: "cashflow_slices",
-    branch: "structure",
-    title: "Separating payment streams",
-    concepts: ["io_po", "io", "po", "floater"],
-  },
-  {
-    id: "loss_protection",
-    branch: "structure",
-    title: "Credit enhancement",
-    concepts: ["subordination", "oc", "ic"],
-  },
-  {
-    id: "credit_events",
-    branch: "credit",
-    title: "From delinquency to loss",
-    concepts: ["delinquency", "default", "severity", "recovery_lag"],
-  },
-  {
-    id: "property_income",
-    branch: "credit",
-    title: "Property operating income",
-    concepts: ["rent_roll", "occupancy", "noi"],
-  },
-  {
-    id: "debt_capacity",
-    branch: "credit",
-    title: "How much debt can it carry?",
-    concepts: ["dscr", "ltv", "cap_rate", "debt_yield"],
-  },
-  {
-    id: "refinance_exit",
-    branch: "credit",
-    title: "The maturity exit",
-    concepts: ["refinance_risk", "cmbs", "conduit_sasb"],
-  },
+  ...original_topics
+    .map((t) => ({
+      ...t,
+      concepts: t.concepts.filter(
+        (id) => !atlas_concepts.some((c) => c.id === id),
+      ),
+    }))
+    .filter((t) => t.concepts.length),
+  ...atlas_topics,
 ];
 
 export const mortgage_sources: Record<
   string,
   { publisher: string; title: string; url: string }
 > = {
+  ...atlas_sources,
   cfpb: {
-    publisher: "CFPB",
-    title: "How does paying down a mortgage work?",
-    url: "https://www.consumerfinance.gov/ask-cfpb/how-does-paying-down-a-mortgage-work-en-1943/",
+    publisher: 'CFPB',
+    title: 'How does paying down a mortgage work?',
+    url: 'https://www.consumerfinance.gov/ask-cfpb/how-does-paying-down-a-mortgage-work-en-1943/',
   },
   arm: {
-    publisher: "CFPB",
-    title: "Fixed-rate and adjustable-rate mortgages",
-    url: "https://www.consumerfinance.gov/ask-cfpb/what-is-the-difference-between-a-fixed-rate-and-adjustable-rate-mortgage-arm-loan-en-100/",
+    publisher: 'CFPB',
+    title: 'Fixed-rate and adjustable-rate mortgages',
+    url: 'https://www.consumerfinance.gov/ask-cfpb/what-is-the-difference-between-a-fixed-rate-and-adjustable-rate-mortgage-arm-loan-en-100/',
   },
   basics: {
-    publisher: "Fannie Mae",
-    title: "Basics of Single-Family MBS · cash flows, factors and guarantees",
-    url: "https://capitalmarkets.fanniemae.com/media/4271/display",
+    publisher: 'Fannie Mae',
+    title: 'Basics of Single-Family MBS · cash flows, factors and guarantees',
+    url: 'https://capitalmarkets.fanniemae.com/media/4271/display',
   },
   cohort: {
-    publisher: "Federal Reserve Bank of New York",
-    title: "Asset Pricing with Cohort-Based Trading · pp. 35–36",
-    url: "https://www.newyorkfed.org/medialibrary/media/research/staff_reports/sr931.pdf#page=37",
+    publisher: 'Federal Reserve Bank of New York',
+    title: 'Asset Pricing with Cohort-Based Trading · pp. 35–36',
+    url: 'https://www.newyorkfed.org/medialibrary/media/research/staff_reports/sr931.pdf#page=37',
   },
   guide: {
-    publisher: "SIFMA",
-    title: "Investor’s Guide to Mortgage Securities · hosted by Fifth Third",
-    url: "https://www.53.com/content/dam/fifth-third/docs/legal/fts-sifma-investors-guide.pdf",
+    publisher: 'SIFMA',
+    title: 'Investor’s Guide to Mortgage Securities · hosted by Fifth Third',
+    url: 'https://www.53.com/content/dam/fifth-third/docs/legal/fts-sifma-investors-guide.pdf',
   },
   formulas: {
-    publisher: "SIFMA",
-    title: "Standard Formulas · SF-47–57, yield and average-life conventions",
-    url: "https://www.sifma.org/wp-content/uploads/2017/08/chsf.pdf",
+    publisher: 'SIFMA',
+    title: 'Standard Formulas · SF-47–57, yield and average-life conventions',
+    url: 'https://www.sifma.org/wp-content/uploads/2017/08/chsf.pdf',
   },
   tba: {
-    publisher: "Federal Reserve Bank of New York",
-    title: "TBA Trading and Liquidity in the Agency MBS Market",
-    url: "https://www.newyorkfed.org/medialibrary/media/research/epr/2013/1212vick.pdf",
+    publisher: 'Federal Reserve Bank of New York',
+    title: 'TBA Trading and Liquidity in the Agency MBS Market',
+    url: 'https://www.newyorkfed.org/medialibrary/media/research/epr/2013/1212vick.pdf',
   },
   convexity: {
-    publisher: "Federal Reserve Bank of New York",
-    title: "Convexity Event Risks in a Rising Interest Rate Environment",
-    url: "https://libertystreeteconomics.newyorkfed.org/2014/03/convexity-event-risks-in-a-rising-interest-rate-environment/",
+    publisher: 'Federal Reserve Bank of New York',
+    title: 'Convexity Event Risks in a Rising Interest Rate Environment',
+    url: 'https://libertystreeteconomics.newyorkfed.org/2014/03/convexity-event-risks-in-a-rising-interest-rate-environment/',
   },
   dv01: {
-    publisher: "CME Group",
-    title: "Treasury Analytics · DV01 and yield sensitivity",
-    url: "https://www.cmegroup.com/tools-information/quikstrike/quikstrike-treasury-analytics-user-guide.html",
+    publisher: 'CME Group',
+    title: 'Treasury Analytics · DV01 and yield sensitivity',
+    url: 'https://www.cmegroup.com/tools-information/quikstrike/quikstrike-treasury-analytics-user-guide.html',
   },
   hedge: {
-    publisher: "CME Group",
-    title: "Hedging 3-Year Note Issuance · DV01 hedge ratio",
-    url: "https://www.cmegroup.com/education/articles-and-reports/hedging-3-year-note-issuance",
+    publisher: 'CME Group',
+    title: 'Hedging 3-Year Note Issuance · DV01 hedge ratio',
+    url: 'https://www.cmegroup.com/education/articles-and-reports/hedging-3-year-note-issuance',
   },
   structure: {
-    publisher: "Fannie Mae",
-    title: "Basics of Structured Transactions · class types and payment rules",
-    url: "https://capitalmarkets.fanniemae.com/media/4396/display",
+    publisher: 'Fannie Mae',
+    title: 'Basics of Structured Transactions · class types and payment rules',
+    url: 'https://capitalmarkets.fanniemae.com/media/4396/display',
   },
   glossary: {
-    publisher: "FINRA",
-    title: "Mortgage-Backed Securities Data Glossary",
-    url: "https://www.finra.org/finra-data/fixed-income/mbs/glossary",
+    publisher: 'FINRA',
+    title: 'Mortgage-Backed Securities Data Glossary',
+    url: 'https://www.finra.org/finra-data/fixed-income/mbs/glossary',
   },
   investor: {
-    publisher: "SEC · Investor.gov",
-    title: "Mortgage-Backed Securities and Collateralized Mortgage Obligations",
-    url: "https://www.investor.gov/introduction-investing/investing-basics/glossary/mortgage-backed-securities-and-collateralized",
+    publisher: 'SEC · Investor.gov',
+    title: 'Mortgage-Backed Securities and Collateralized Mortgage Obligations',
+    url: 'https://www.investor.gov/introduction-investing/investing-basics/glossary/mortgage-backed-securities-and-collateralized',
   },
   disclosure: {
-    publisher: "FINRA",
-    title: "Regulatory Notice 12-56 · pool-characteristic definitions",
-    url: "https://www.finra.org/rules-guidance/notices/12-56",
+    publisher: 'FINRA',
+    title: 'Regulatory Notice 12-56 · pool-characteristic definitions',
+    url: 'https://www.finra.org/rules-guidance/notices/12-56',
   },
   freddie_factor: {
-    publisher: "Freddie Mac",
+    publisher: 'Freddie Mac',
     title:
-      "Calculation of Interest and Principal Payments · applicable factors",
-    url: "https://capitalmarkets.freddiemac.com/mbs/docs/fs_paymentcalc.pdf",
+      'Calculation of Interest and Principal Payments · applicable factors',
+    url: 'https://capitalmarkets.freddiemac.com/mbs/docs/fs_paymentcalc.pdf',
   },
   freddie_cpr: {
-    publisher: "Freddie Mac",
-    title: "Daily Prepayment Report Guide · CPR annualization, p. 13",
-    url: "https://capitalmarkets.freddiemac.com/mbs/docs/dpr_guide.pdf",
+    publisher: 'Freddie Mac',
+    title: 'Daily Prepayment Report Guide · CPR annualization, p. 13',
+    url: 'https://capitalmarkets.freddiemac.com/mbs/docs/dpr_guide.pdf',
   },
   freddie_faq: {
-    publisher: "Freddie Mac",
-    title: "Mortgage Securities FAQs · support and accrual classes",
-    url: "https://capitalmarkets.freddiemac.com/mbs/products/faq",
+    publisher: 'Freddie Mac',
+    title: 'Mortgage Securities FAQs · support and accrual classes',
+    url: 'https://capitalmarkets.freddiemac.com/mbs/products/faq',
   },
   fed_spreads: {
-    publisher: "Federal Reserve Board",
-    title: "FEDS 2014-112 · spread definitions, Appendix B.3",
-    url: "https://www.federalreserve.gov/econresdata/feds/2014/files/2014112pap.pdf#page=45",
+    publisher: 'Federal Reserve Board',
+    title: 'FEDS 2014-112 · spread definitions, Appendix B.3',
+    url: 'https://www.federalreserve.gov/econresdata/feds/2014/files/2014112pap.pdf#page=45',
   },
   cfa_valuation: {
-    publisher: "CFA Institute",
-    title: "Fixed-Income Bond Valuation: Prices and Yields · public overview",
-    url: "https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/fixed-income-bond-valuation-prices-and-yields",
+    publisher: 'CFA Institute',
+    title: 'Fixed-Income Bond Valuation: Prices and Yields · public overview',
+    url: 'https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/fixed-income-bond-valuation-prices-and-yields',
   },
   cfa_risk: {
-    publisher: "CFA Institute",
+    publisher: 'CFA Institute',
     title:
-      "Curve-Based and Empirical Fixed-Income Risk Measures · public overview",
-    url: "https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/curve-based-and-empirical-fixed-income-risk-measures",
+      'Curve-Based and Empirical Fixed-Income Risk Measures · public overview',
+    url: 'https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/curve-based-and-empirical-fixed-income-risk-measures',
   },
   remic: {
-    publisher: "Fannie Mae",
-    title: "Structured Transactions: REMICs and Grantor Trusts",
-    url: "https://capitalmarkets.fanniemae.com/mortgage-backed-securities/structured-transactions-products/structured-transactions-products-remics-and-grantor-trusts",
+    publisher: 'Fannie Mae',
+    title: 'Structured Transactions: REMICs and Grantor Trusts',
+    url: 'https://capitalmarkets.fanniemae.com/mortgage-backed-securities/structured-transactions-products/structured-transactions-products-remics-and-grantor-trusts',
   },
   irs: {
-    publisher: "IRS",
-    title: "Form 1066 Instructions · REMIC requirements under Who Must File",
-    url: "https://www.irs.gov/instructions/i1066",
+    publisher: 'IRS',
+    title: 'Form 1066 Instructions · REMIC requirements under Who Must File',
+    url: 'https://www.irs.gov/instructions/i1066',
   },
   smbs: {
-    publisher: "Fannie Mae",
+    publisher: 'Fannie Mae',
     title:
-      "SMBS Prospectus · stripped cash flows and prepayment risk, pp. 2 and 8",
-    url: "https://capitalmarkets.fanniemae.com/sites/capmrkt/files/syndicated/mbs/smbspros/FNM_SMBS_Base_20230501.pdf",
+      'SMBS Prospectus · stripped cash flows and prepayment risk, pp. 2 and 8',
+    url: 'https://capitalmarkets.fanniemae.com/sites/capmrkt/files/syndicated/mbs/smbspros/FNM_SMBS_Base_20230501.pdf',
   },
   sofr: {
-    publisher: "Federal Reserve Bank of New York",
-    title: "Secured Overnight Financing Rate",
-    url: "https://www.newyorkfed.org/markets/reference-rates/sofr",
+    publisher: 'Federal Reserve Bank of New York',
+    title: 'Secured Overnight Financing Rate',
+    url: 'https://www.newyorkfed.org/markets/reference-rates/sofr',
   },
   treasury_curve: {
-    publisher: "U.S. Treasury",
-    title: "Treasury Yield Curve Methodology",
-    url: "https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology",
+    publisher: 'U.S. Treasury',
+    title: 'Treasury Yield Curve Methodology',
+    url: 'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology',
   },
   cre: {
-    publisher: "OCC",
+    publisher: 'OCC',
     title:
-      "Commercial Real Estate Lending · income, debt capacity and repayment risk",
-    url: "https://www.occ.treas.gov/publications-and-resources/publications/comptrollers-handbook/files/commercial-real-estate-lending/pub-ch-commercial-real-estate.pdf",
+      'Commercial Real Estate Lending · income, debt capacity and repayment risk',
+    url: 'https://www.occ.treas.gov/publications-and-resources/publications/comptrollers-handbook/files/commercial-real-estate-lending/pub-ch-commercial-real-estate.pdf',
   },
   ginnie: {
-    publisher: "Ginnie Mae",
-    title: "Our Guaranty",
-    url: "https://www.ginniemae.gov/about-us/who-we-are/funding-government-lending",
+    publisher: 'Ginnie Mae',
+    title: 'Our Guaranty',
+    url: 'https://www.ginniemae.gov/about-us/who-we-are/funding-government-lending',
   },
   arrc: {
-    publisher: "Federal Reserve Bank of New York · ARRC",
-    title: "An Updated User’s Guide to SOFR",
-    url: "https://www.newyorkfed.org/medialibrary/Microsites/arrc/files/2021/users-guide-to-sofr2021-update.pdf",
+    publisher: 'Federal Reserve Bank of New York · ARRC',
+    title: 'An Updated User’s Guide to SOFR',
+    url: 'https://www.newyorkfed.org/medialibrary/Microsites/arrc/files/2021/users-guide-to-sofr2021-update.pdf',
   },
   lockin: {
-    publisher: "FHFA",
-    title: "The Lock-In Effect of Rising Mortgage Rates",
-    url: "https://www.fhfa.gov/research/papers/wp2403",
+    publisher: 'FHFA',
+    title: 'The Lock-In Effect of Rising Mortgage Rates',
+    url: 'https://www.fhfa.gov/research/papers/wp2403',
   },
   clo: {
-    publisher: "Guggenheim Investments",
-    title: "Understanding Collateralized Loan Obligations",
-    url: "https://www.guggenheiminvestments.com/perspectives/portfolio-strategy/understanding-collateralized-loan-obligations-clo",
+    publisher: 'Guggenheim Investments',
+    title: 'Understanding Collateralized Loan Obligations',
+    url: 'https://www.guggenheiminvestments.com/perspectives/portfolio-strategy/understanding-collateralized-loan-obligations-clo',
   },
   treasury_futures: {
-    publisher: "CME Group",
-    title: "Understanding Treasury Futures · Quotation Practices, p. 3",
-    url: "https://www.cmegroup.com/content/dam/cmegroup/education/files/understanding-treasury-futures.pdf#page=4",
+    publisher: 'CME Group',
+    title: 'Understanding Treasury Futures · Quotation Practices, p. 3',
+    url: 'https://www.cmegroup.com/content/dam/cmegroup/education/files/understanding-treasury-futures.pdf#page=4',
   },
   prepayment_macro: {
-    publisher: "MSCI · Yihai Yu",
-    title: "MBS prepayment in 2020: Looking back, looking ahead",
-    url: "https://www.msci.com/research-and-insights/blog-post/mbs-prepayment-in-2020-looking-back-looking-ahead",
+    publisher: 'MSCI · Yihai Yu',
+    title: 'MBS prepayment in 2020: Looking back, looking ahead',
+    url: 'https://www.msci.com/research-and-insights/blog-post/mbs-prepayment-in-2020-looking-back-looking-ahead',
   },
   crefc_c: {
-    publisher: "CRE Finance Council",
-    title: "CMBS Glossary · Conduit",
-    url: "https://www.crefc.org/cre/cre/content/learn/Glossary/CREFC_Glossary.aspx?GlossaryTabs=3",
+    publisher: 'CRE Finance Council',
+    title: 'CMBS Glossary · Conduit',
+    url: 'https://www.crefc.org/cre/cre/content/learn/Glossary/CREFC_Glossary.aspx?GlossaryTabs=3',
   },
   crefc_s: {
-    publisher: "CRE Finance Council",
-    title: "CMBS Glossary · Single Asset Single Borrower",
-    url: "https://www.crefc.org/cre/cre/content/learn/Glossary/CREFC_Glossary.aspx?GlossaryTabs=19",
+    publisher: 'CRE Finance Council',
+    title: 'CMBS Glossary · Single Asset Single Borrower',
+    url: 'https://www.crefc.org/cre/cre/content/learn/Glossary/CREFC_Glossary.aspx?GlossaryTabs=19',
   },
 };
 
-export const mortgage_concepts: MortgageConcept[] = [
+const original_concepts: MortgageConcept[] = [
   {
     id: "principal_interest",
     branch: "basics",
@@ -3273,7 +3295,74 @@ export const mortgage_concepts: MortgageConcept[] = [
   },
 ];
 
+const formula_additions: Record<
+  string,
+  NonNullable<MortgageConcept['formula']>
+> = {
+  amortization: {
+    expression: 'Monthly payment = original balance × r(1+r)^N / ((1+r)^N − 1)',
+    assumptions:
+      'Level-payment, fully amortizing fixed-rate loan. r is the monthly decimal rate, N is months. At zero interest, payment is balance divided by months. Excludes taxes, insurance and fees.',
+  },
+  z_spread: {
+    expression:
+      'Dirty price equals the sum of fixed projected cash flows discounted on the zero curve plus a constant spread.',
+    assumptions:
+      'Illustrative continuous compounding. Use one stated cash-flow scenario and a consistent zero curve. The formula does not itself model prepayment options.',
+  },
+  oas: {
+    expression:
+      'Dirty price equals the model-expected value of path-dependent cash flows discounted with the option-adjusted spread.',
+    assumptions:
+      'Schematic pricing-model expectation, not a forecast. Rate dynamics, prepayment or exercise behavior and the curve must be specified consistently.',
+  },
+  g_spread: {
+    expression:
+      'G-spread = bond yield minus the stated government benchmark yield.',
+    assumptions:
+      'Use a named same-currency government reference and comparable conventions.',
+  },
+  i_spread: {
+    expression: 'I-spread = bond yield minus an interpolated swap par rate.',
+    assumptions:
+      'State the swap family, currency and comparison tenor. This is not cash-flow-by-cash-flow zero-curve discounting.',
+  },
+  swap_spread: {
+    expression:
+      'Swap spread = swap fixed rate minus comparable government yield.',
+    assumptions:
+      'Same currency and comparable maturity and quotation conventions.',
+  },
+  quoted_margin: {
+    expression: 'Coupon rate = reference rate plus contractual margin.',
+    assumptions:
+      'Simplified uncapped, unfloored coupon before day-count accrual. Observation and reset rules follow the contract.',
+  },
+  spread_duration: {
+    expression:
+      'Spread duration is approximately minus the proportional price change divided by the decimal spread change.',
+    assumptions:
+      'Local sensitivity with the benchmark curve fixed. State which cash-flow and option assumptions are held constant.',
+  },
+};
+export const mortgage_concepts: MortgageConcept[] = [
+  ...original_concepts.filter(
+    (c) => !atlas_concepts.some((n) => n.id === c.id),
+  ),
+  ...atlas_concepts.map((c) => {
+    const prior = original_concepts.find((n) => n.id === c.id);
+    return {
+      ...c,
+      aliases: [...new Set([...(prior?.aliases ?? []), ...c.aliases])],
+    };
+  }),
+].map((c) => ({
+  ...c,
+  ...(formula_additions[c.id] ? { formula: formula_additions[c.id] } : {}),
+}));
+
 export const mortgage_relationships: MortgageRelationship[] = [
+  ...atlas_relationships,
   {
     id: "prepayments__reinvestment",
     source: "prepayments",
@@ -3930,53 +4019,54 @@ export const mortgage_relationships: MortgageRelationship[] = [
 ];
 
 export const mortgage_paths = [
+  ...atlas_paths,
   {
-    id: "borrower_to_hedge",
-    title: "From a borrower to a hedge",
+    id: 'borrower_to_hedge',
+    title: 'From a borrower to a hedge',
     description:
-      "Follow a refinancing decision into cash flows, risk and portfolio action.",
-    steps: ["frictions", "prepayments", "duration", "dv01", "hedging"],
+      'Follow a refinancing decision into cash flows, risk and portfolio action.',
+    steps: ['frictions', 'prepayments', 'duration', 'dv01', 'hedging'],
   },
   {
-    id: "collateral_to_price",
-    title: "Why one pool costs more",
-    description: "Connect the collateral you select with the price you pay.",
-    steps: ["loan_balance", "specified", "pay_up", "tba", "liquidity"],
+    id: 'collateral_to_price',
+    title: 'Why one pool costs more',
+    description: 'Connect the collateral you select with the price you pay.',
+    steps: ['loan_balance', 'specified', 'pay_up', 'tba', 'liquidity'],
   },
   {
-    id: "pac_protection",
-    title: "Where PAC protection ends",
+    id: 'pac_protection',
+    title: 'Where PAC protection ends',
     description:
-      "Follow the support mechanism, its limits and the resulting rate exposure.",
-    steps: ["support", "pac", "extension", "duration", "dv01"],
+      'Follow the support mechanism, its limits and the resulting rate exposure.',
+    steps: ['support', 'pac', 'extension', 'duration', 'dv01'],
   },
   {
-    id: "property_to_loss",
-    title: "From a tenant to a bond loss",
+    id: 'property_to_loss',
+    title: 'From a tenant to a bond loss',
     description:
-      "Trace weaker property income into refinancing and the loss waterfall.",
+      'Trace weaker property income into refinancing and the loss waterfall.',
     steps: [
-      "occupancy",
-      "noi",
-      "dscr",
-      "refinance_risk",
-      "default",
-      "severity",
-      "subordination",
+      'occupancy',
+      'noi',
+      'dscr',
+      'refinance_risk',
+      'default',
+      'severity',
+      'subordination',
     ],
   },
   {
-    id: "which_rate",
-    title: "Which rate are we comparing?",
+    id: 'which_rate',
+    title: 'Which rate are we comparing?',
     description:
-      "Separate dated discounting, a fixed-path spread and option-adjusted value.",
+      'Separate dated discounting, a fixed-path spread and option-adjusted value.',
     steps: [
-      "spot_curve",
-      "discount_factor",
-      "pv",
-      "z_spread",
-      "oas",
-      "model_risk",
+      'spot_curve',
+      'discount_factor',
+      'pv',
+      'z_spread',
+      'oas',
+      'model_risk',
     ],
   },
 ];

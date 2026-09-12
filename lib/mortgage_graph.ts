@@ -3,11 +3,11 @@ import {
   mortgage_topics,
   mortgage_concepts,
   mortgage_relationships,
-} from "../content/mortgage_concepts.ts";
+} from '../content/mortgage_concepts.ts';
 
 export type GraphNode = {
   id: string;
-  kind: "root" | "branch" | "topic" | "concept";
+  kind: 'root' | 'branch' | 'topic' | 'concept';
   title: string;
   subtitle: string;
   branch?: string;
@@ -35,15 +35,15 @@ export const topic_index = new Map(
 // Nothing depends on browser font metrics, timers or a force simulation.
 export function build_mortgage_graph(
   depth: number,
-  branch_filter = "all",
-  topic_filter = "all",
+  branch_filter = 'all',
+  topic_filter = 'all',
 ): GraphNode[] {
   const nodes: GraphNode[] = [
     {
-      id: "mortgages",
-      kind: "root",
-      title: "Mortgage Map",
-      subtitle: "Loans → cash flows → decisions",
+      id: 'mortgages',
+      kind: 'root',
+      title: 'Mortgage Map',
+      subtitle: 'Loans → cash flows → decisions',
       x: 0,
       y: 0,
       width: 250,
@@ -51,25 +51,28 @@ export function build_mortgage_graph(
     },
   ];
   const branches = mortgage_branches.filter(
-    (b) => branch_filter === "all" || b.id === branch_filter,
+    (b) => branch_filter === 'all' || b.id === branch_filter,
   );
   const topic_span = (id: string) =>
     depth >= 2 ? (topic_index.get(id)?.concepts.length ?? 0) * 84 + 26 : 114;
   const branch_span = (id: string) =>
     depth === 0
-      ? 210
+      ? 160
       : mortgage_topics
           .filter(
             (t) =>
               t.branch === id &&
-              (topic_filter === "all" || t.id === topic_filter),
+              (topic_filter === 'all' || t.id === topic_filter),
           )
           .reduce((sum, t) => sum + topic_span(t.id), 0) + 100;
   for (const side of [-1, 1]) {
     const side_branches = branches.filter((b) =>
-      branch_filter !== "all"
+      branch_filter !== 'all'
         ? side === 1
-        : (mortgage_branches.indexOf(b) < 4 ? -1 : 1) === side,
+        : (mortgage_branches.indexOf(b) <
+          Math.ceil(mortgage_branches.length / 2)
+            ? -1
+            : 1) === side,
     );
     let cursor =
       -side_branches.reduce((sum, b) => sum + branch_span(b.id), 0) / 2;
@@ -79,19 +82,19 @@ export function build_mortgage_graph(
       const topics = mortgage_topics.filter(
         (t) =>
           t.branch === branch.id &&
-          (topic_filter === "all" || t.id === topic_filter),
+          (topic_filter === 'all' || t.id === topic_filter),
       );
       nodes.push({
         id: branch.id,
-        kind: "branch",
+        kind: 'branch',
         title: branch.title,
         subtitle: branch.question,
         branch: branch.id,
-        x: side * (branch_filter === "all" ? 440 : 300),
+        x: side * (branch_filter === 'all' ? 440 : 300),
         y: center,
         width: 250,
         height: 116,
-        parent: "mortgages",
+        parent: 'mortgages',
       });
       let topic_cursor = cursor + 50;
       if (depth > 0)
@@ -99,11 +102,11 @@ export function build_mortgage_graph(
           const height = topic_span(topic.id);
           nodes.push({
             id: topic.id,
-            kind: "topic",
+            kind: 'topic',
             title: topic.title,
             subtitle: `${topic.concepts.length} concepts`,
             branch: branch.id,
-            x: side * (branch_filter === "all" ? 800 : 580),
+            x: side * (branch_filter === 'all' ? 800 : 580),
             y: topic_cursor + height / 2,
             width: 240,
             height: 76,
@@ -114,11 +117,11 @@ export function build_mortgage_graph(
               const node = concept_index.get(id)!;
               nodes.push({
                 id,
-                kind: "concept",
+                kind: 'concept',
                 title: node.title,
                 subtitle: node.subtitle,
                 branch: branch.id,
-                x: side * (branch_filter === "all" ? 1140 : 865),
+                x: side * (branch_filter === 'all' ? 1140 : 865),
                 y: topic_cursor + 42 + index * 84,
                 width: 248,
                 height: 68,
@@ -149,7 +152,7 @@ export function build_connection_graph(selected: string): GraphNode[] {
     const c = concept_index.get(id)!;
     return {
       id,
-      kind: "concept",
+      kind: 'concept',
       title: c.title,
       subtitle: c.subtitle,
       branch: c.branch,
@@ -162,10 +165,10 @@ export function build_connection_graph(selected: string): GraphNode[] {
   return [
     node(selected, 0, 0),
     ...incoming.map((id, i) =>
-      node(id, -530, (i - (incoming.length - 1) / 2) * 130),
+      node(id, -620, (i - (incoming.length - 1) / 2) * 130),
     ),
     ...outgoing.map((id, i) =>
-      node(id, 530, (i - (outgoing.length - 1) / 2) * 130),
+      node(id, 620, (i - (outgoing.length - 1) / 2) * 130),
     ),
   ];
 }
@@ -190,7 +193,7 @@ export function fit_camera(
   const scale = Math.min(
     1.1,
     Math.max(
-      0.07,
+      0.02,
       Math.min((width - 36) / bounds.width, (height - 64) / bounds.height),
     ),
   );
@@ -250,4 +253,30 @@ export function edge_path(from: GraphNode, to: GraphNode) {
   const x2 = to.x - (direction * to.width) / 2;
   const bend = Math.max(45, Math.abs(x2 - x1) * 0.48);
   return `M ${x1} ${from.y} C ${x1 + direction * bend} ${from.y}, ${x2 - direction * bend} ${to.y}, ${x2} ${to.y}`;
+}
+
+// Analytical edges live in their own three-column study. Each label has a
+// dedicated horizontal lane at its outer node, never on top of a card.
+export function connection_route(from: GraphNode, to: GraphNode) {
+  const outer = from.x === 0 ? to : from;
+  const side = Math.sign(outer.x);
+  const start = side * 125;
+  const end = outer.x - (side * outer.width) / 2;
+  const lane = side * 260;
+  const curve = side * 210;
+  const path =
+    from.x === 0
+      ? `M ${start} 0 C ${curve} 0, ${curve} ${outer.y}, ${lane} ${outer.y} L ${end} ${outer.y}`
+      : `M ${end} ${outer.y} L ${lane} ${outer.y} C ${curve} ${outer.y}, ${curve} 0, ${start} 0`;
+  return { path, x: side * 375, y: outer.y };
+}
+export function study_edges(selected: string) {
+  const seen = new Set<string>();
+  return mortgage_relationships.filter((edge) => {
+    if (edge.source !== selected && edge.target !== selected) return false;
+    const neighbor = edge.source === selected ? edge.target : edge.source;
+    if (seen.has(neighbor)) return false;
+    seen.add(neighbor);
+    return true;
+  });
 }
