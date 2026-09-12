@@ -55,6 +55,7 @@ export const homeStructuredData = {
         profile.links.youtube,
         profile.links.instagram,
         profile.links.douban,
+        ...(profile.newsletterUrl ? [profile.newsletterUrl] : []),
       ],
     },
     {
