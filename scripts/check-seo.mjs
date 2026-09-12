@@ -40,10 +40,10 @@ const structuredData = (html) =>
 for (const path of [
   '/',
   '/journal',
-  '/lab/mortgage',
 ]) {
   const { response, body } = await read(path);
   assert.equal(response.status, 200, path);
+  assert.ok(!body.includes('/lab/mortgage'), 'Withdrawn tool must not be linked');
   assert.ok(!response.headers.get('x-robots-tag')?.includes('noindex'), path);
   assert.ok(
     !/<meta[^>]+name="robots"[^>]+content="[^"]*noindex/.test(body),
@@ -131,9 +131,12 @@ assert.deepEqual(
   [
     `${canonical}/`,
     `${canonical}/journal`,
-    `${canonical}/lab/mortgage`,
   ].sort((a, b) => a.localeCompare(b)),
 );
+const withdrawn_mortgage = await read('/lab/mortgage');
+assert.equal(withdrawn_mortgage.response.status, 404);
+assert.ok(withdrawn_mortgage.body.includes('noindex'));
+assert.ok(!withdrawn_mortgage.body.includes('mortgage-workbench'));
 for (const slug of [
   'seo-check-missing-page',
   ...archived_posts.filter((post) => !published.some((entry) => entry.slug === post.slug)).map((post) => post.slug),
