@@ -104,12 +104,7 @@ export function MortgageMap({
   );
   const bounds = useMemo(() => graph_bounds(graph), [graph]);
   const relations = useMemo(
-    () =>
-      selected
-        ? mortgage_relationships.filter(
-            (edge) => edge.source === selected || edge.target === selected,
-          )
-        : [],
+    () => (selected ? study_edges(selected) : []),
     [selected],
   );
   const neighbors = useMemo(
