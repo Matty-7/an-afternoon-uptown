@@ -8,7 +8,8 @@ export const metadata: Metadata = {
   authors: [{ name: profile.name }],
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-96.png', type: 'image/png', sizes: '96x96' },
+      { url: '/favicon.svg', type: 'image/svg+xml', sizes: 'any' },
       { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
     ],
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
