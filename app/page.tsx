@@ -441,6 +441,7 @@ export default function Home() {
               </Link>
             )}
           </nav>
+          <Link className="footer-lab-link" href="/lab/mortgage#mortgage-top">Mortgage Lab · An experiment with cash flows</Link>
           <p className="footer-small">JINGHENG HUAN</p>
         </footer>
       </main>

@@ -5,5 +5,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: absoluteUrl('/') },
     { url: absoluteUrl('/journal') },
+    { url: absoluteUrl('/lab/mortgage') },
   ];
 }
