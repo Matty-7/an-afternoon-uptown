@@ -110,6 +110,11 @@ export const atlas_topics = [
 ];
 
 export const atlas_sources = {
+  nyfed_swap_spreads: {
+    publisher: 'Federal Reserve Bank of New York',
+    title: 'Negative Swap Spreads',
+    url: 'https://www.newyorkfed.org/research/epr/2018/epr_2018_negative-swap-spreads_boyarchenko.html',
+  },
   covered_public: {
     publisher: 'European Union',
     title: 'Covered bonds and covered bond public supervision',
@@ -709,7 +714,7 @@ const entries: Entry[] = [
         'Changing the benchmark changes a bond’s quoted spread even with unchanged bond yield.',
       ],
     ],
-    ['spreads_public', 'bis_basis'],
+    ['nyfed_swap_spreads'],
     ['swap spread'],
   ],
   [
