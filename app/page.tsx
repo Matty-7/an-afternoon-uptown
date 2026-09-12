@@ -213,7 +213,6 @@ export default function Home() {
                   loading="lazy"
                 />
               </h3>
-              <p>Another way to get to know me.</p>
               <a
                 className="text-link"
                 href={channels.youtube.url}
@@ -238,7 +237,6 @@ export default function Home() {
                   loading="lazy"
                 />
               </h3>
-              <p>Conversations with Jason, in Mandarin.</p>
               <a
                 className="text-link"
                 href={channels.podcast.url}
@@ -263,17 +261,6 @@ export default function Home() {
                   loading="lazy"
                 />
               </h3>
-              <p>
-                Notes on culture and whatever stays on my mind. Start with{' '}
-                <a
-                  href="https://jinghenghuan.substack.com/p/something-of-my-own"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Something of My Own
-                </a>
-                .
-              </p>
               {newsletterUrl ? (
                 <a
                   className="text-link"
