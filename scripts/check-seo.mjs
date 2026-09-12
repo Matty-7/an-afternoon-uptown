@@ -40,6 +40,7 @@ const structuredData = (html) =>
 for (const path of [
   '/',
   '/journal',
+  '/portfolio/mortgage-map',
 ]) {
   const { response, body } = await read(path);
   assert.equal(response.status, 200, path);
@@ -131,6 +132,7 @@ assert.deepEqual(
   [
     `${canonical}/`,
     `${canonical}/journal`,
+    `${canonical}/portfolio/mortgage-map`,
   ].sort((a, b) => a.localeCompare(b)),
 );
 const withdrawn_mortgage = await read('/lab/mortgage');

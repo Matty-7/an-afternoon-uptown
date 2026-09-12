@@ -1,7 +1,8 @@
 # Jingheng Huan: project conventions
 
-- The identity is Jingheng Huan (郇敬恒). YouTube, Talking Laughs and Newsletters are equal publishing channels before the taste collections. The owner removed the projects section; code belongs on his linked GitHub and LinkedIn profiles.
+- The identity is Jingheng Huan (郇敬恒). YouTube, Talking Laughs and Newsletters are equal publishing channels before the taste collections. On September 12, 2026, the owner explicitly requested a dedicated Portfolio section with a public interactive Mortgage knowledge map. This supersedes his earlier removal of the projects section for this scope.
 - On September 12, 2026, Jingheng explicitly withdrew public authorization for Mortgage Lab due to potential conflicts of interest. Keep `/lab/mortgage` withdrawn, unlinked and out of the sitemap. Do not restore, publicly redeploy or include this project in any portfolio without fresh explicit authorization from Jingheng. Routine maintenance and earlier general deployment authorization do not override this restriction.
+- The subsequently authorized `/portfolio/mortgage-map` is a separate educational concept map, not permission to restore the experiment. Use original explanations and verified public source links. Do not publish private newsletters, personal notes, terminal screenshots, employer materials, or fabricated article provenance. Do not add pricing, forecasts, market data or loan-pool simulation under the map's authorization.
 - Maintain actual book covers on the bookshelf, with keyboard/touch-accessible selection. Never turn it into a ranking.
 - Journal content is maintained in content/posts.json; drafts and future-dated entries must stay out of public routes and RSS. Do not import the posts file or lib/publishing into client components.
 - Newsletter links appear only when profile.newsletterUrl is configured to a real provider. Do not add a nonfunctional sign-up form.
