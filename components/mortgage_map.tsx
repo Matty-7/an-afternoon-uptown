@@ -171,6 +171,8 @@ export function MortgageMap() {
   ]);
   useEffect(() => {
     if (!reader_open || !selected) return;
+    // A new concept starts at its title, even after following a lower link.
+    if (reader_ref.current) reader_ref.current.scrollTop = 0;
     // Focus the reading heading without changing the visitor's page position.
     reader_ref.current
       ?.querySelector<HTMLElement>("h2")
@@ -194,12 +196,14 @@ export function MortgageMap() {
     if (!concept_index.has(id)) return;
     if (trigger) return_focus.current = trigger;
     if (view === "map") {
-      pending_focus.current = id;
+      const node = positions.get(id);
+      const layout_is_ready =
+        depth === 2 && branch_filter === "all" && topic_filter === "all" && node;
+      pending_focus.current = layout_is_ready ? null : id;
       set_depth(2);
       set_branch_filter("all");
       set_topic_filter("all");
-      const node = positions.get(id);
-      if (node)
+      if (layout_is_ready)
         set_camera({
           x: size.width / 2 - node.x,
           y: size.height / 2 - node.y,

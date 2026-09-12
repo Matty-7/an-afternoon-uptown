@@ -403,9 +403,8 @@ export const mortgage_sources: Record<
     url: "https://www.cmegroup.com/content/dam/cmegroup/education/files/understanding-treasury-futures.pdf#page=4",
   },
   prepayment_macro: {
-    publisher: "Chernov, Dunn & Longstaff · UCLA",
-    title:
-      "Macroeconomic-Driven Prepayment Risk and the Valuation of Mortgage-Backed Securities",
+    publisher: "MSCI · Yihai Yu",
+    title: "MBS prepayment in 2020: Looking back, looking ahead",
     url: "https://www.msci.com/research-and-insights/blog-post/mbs-prepayment-in-2020-looking-back-looking-ahead",
   },
   crefc_c: {
