@@ -40,6 +40,7 @@ const structuredData = (html) =>
 for (const path of [
   '/',
   '/journal',
+  '/lab/mortgage',
 ]) {
   const { response, body } = await read(path);
   assert.equal(response.status, 200, path);
@@ -80,7 +81,7 @@ for (const path of [
       ),
     );
     assert.ok(body.includes('also known as Matty Huan'));
-  } else {
+  } else if (path === '/journal') {
     for (const post of published) {
       assert.ok(body.includes(`href="${post.external_url}"`));
       assert.ok(body.includes(post.title));
@@ -130,6 +131,7 @@ assert.deepEqual(
   [
     `${canonical}/`,
     `${canonical}/journal`,
+    `${canonical}/lab/mortgage`,
   ].sort((a, b) => a.localeCompare(b)),
 );
 for (const slug of [
