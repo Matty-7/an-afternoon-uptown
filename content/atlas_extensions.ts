@@ -2,6 +2,7 @@ import type {
   MortgageConcept,
   MortgageRelationship,
 } from './mortgage_concepts.ts';
+import { context_comparisons } from './mortgage_context.ts';
 
 // Public financial concepts only. Currency, collateral, guarantee and coupon are
 // separate dimensions, not interchangeable levels in a product taxonomy.
@@ -1458,6 +1459,8 @@ export const atlas_comparisons: ComparisonSet[] = [
     ],
   },
 ];
+
+atlas_comparisons.push(...context_comparisons);
 
 export const atlas_paths = [
   {

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
+import { assert_newsletter_links } from '../lib/newsletter_schema.ts';
 const read = async (name) =>
   JSON.parse(
     await readFile(new URL(`../content/${name}.json`, import.meta.url), 'utf8'),
@@ -100,13 +101,7 @@ for (const project of projects) {
   https(project.url);
 }
 const newsletter_links = await read('newsletter_links');
-for (const entry of newsletter_links) {
-  assert.ok(entry.slug && entry.title && entry.date);
-  assert.ok(['draft', 'published'].includes(entry.status));
-  https(entry.external_url);
-  assert.equal(new URL(entry.external_url).origin, new URL(profile.newsletterUrl).origin);
-  assert.ok(!('blocks' in entry) && !('excerpt' in entry), 'Public newsletter links must not include prose');
-}
+assert_newsletter_links(newsletter_links, profile.newsletterUrl);
 const home = await readFile(
   new URL('../app/page.tsx', import.meta.url),
   'utf8',

@@ -11,6 +11,7 @@ Edit `content/newsletter_links.json`, the runtime input to `lib/publishing.ts`. 
 - `/feed.xml` includes visible entries and their external destinations.
 - The sitemap includes visible Journal routes.
 - `lib/post_visibility.ts` filters drafts and future dates. Visibility is resolved at request time, not at Worker initialization.
+- `lib/newsletter_schema.ts` validates the same link-only records in the build and runtime: trimmed titles, unique kebab-case slugs, real `YYYY-MM-DD` dates, supported kind/status and HTTPS destinations on the configured provider origin. Unknown fields, including prose, are rejected. A build error names the record; runtime filtering removes malformed records and every conflicting duplicate without exposing them publicly.
 
 `content/posts.json` contains legacy, owner-approved essay text. It is not the current Journal source. Preserve that text and do not import it into client components or restore it to public pages as part of routine maintenance. A draft flag controls site visibility, not source-repository privacy.
 
