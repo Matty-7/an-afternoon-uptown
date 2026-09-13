@@ -48,6 +48,7 @@ import {
 import type { Camera, GraphNode } from '@/lib/mortgage_graph';
 
 import { atlas_comparisons } from '@/content/atlas_extensions';
+import { spread_groups } from '@/content/mortgage_spreads';
 import { mechanism_models } from '@/content/mortgage_mechanisms';
 import {
   concept_hash,
@@ -67,7 +68,12 @@ export function MortgageMap({
   formulas: Record<string, { html: string; tex: string; variables: string }>;
 }) {
   const [comparison_id, set_comparison_id] = useState('spreads');
+  const [spread_group, set_spread_group] = useState('all');
   const comparison = atlas_comparisons.find((c) => c.id === comparison_id)!;
+  const active_spread_group = spread_groups.find((g) => g.id === spread_group)!;
+  const comparison_rows = comparison_id === 'spreads' && spread_group !== 'all'
+    ? comparison.rows.filter((r) => active_spread_group.concepts.includes(r.id))
+    : comparison.rows;
   const [depth, set_depth] = useState(0);
   const [branch_filter, set_branch_filter] = useState('all');
   const [topic_filter, set_topic_filter] = useState('all');
@@ -765,6 +771,17 @@ export function MortgageMap({
                 <h2>{comparison.title}</h2>
                 <p>{comparison.intro}</p>
               </div>
+              {comparison_id === 'spreads' && (
+                <div className="atlas-spread-filters" aria-label="Spread families">
+                  {spread_groups.map((group) => (
+                    <button key={group.id} aria-pressed={spread_group === group.id}
+                      onClick={() => { set_spread_group(group.id); set_reader_open(false); }}>
+                      {group.title}
+                    </button>
+                  ))}
+                  <output aria-live="polite">{comparison_rows.length} measures</output>
+                </div>
+              )}
               <section
                 className="atlas-table-scroll"
                 tabIndex={0}
@@ -785,7 +802,7 @@ export function MortgageMap({
                     </tr>
                   </thead>
                   <tbody>
-                    {comparison.rows.map((row) => (
+                    {comparison_rows.map((row) => (
                       <tr
                         key={row.id}
                         className={

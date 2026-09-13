@@ -15,6 +15,7 @@ import films from '@/content/films.json';
 import { Bookshelf } from '@/components/bookshelf';
 import profile from '@/content/profile.json';
 import channels from '@/content/channels.json';
+import { mortgage_domains, mortgage_preview_path } from '@/content/mortgage_domains';
 import { homeStructuredData, serializeStructuredData } from '@/lib/seo';
 const newsletterUrl = profile.newsletterUrl as string | null;
 
@@ -160,12 +161,13 @@ export default function Home() {
           <BrandMark />
         </a>
         <div className="nav-links">
-          <a href="#channels">Channels</a>
-          <Link href="/journal">Newsletters</Link>
-          <a href="#portfolio">Portfolio</a>
+          <a href="#youtube">YouTube</a>
+          <a href="#podcast">Podcast</a>
+          <Link href="/journal">Newsletter</Link>
+          <a href="#projects">Projects</a>
           <a href="#records">Music</a>
           <a href="#films">Films</a>
-          <a href="#books">Books</a>
+          <a href="#books">Book</a>
           <a href="#broadway">Broadway</a>
         </div>
         <div className="reading-progress" aria-hidden="true" />
@@ -191,7 +193,7 @@ export default function Home() {
         </section>
         <section id="channels" className="channels-section">
           <div className="section-heading" data-reveal>
-            <p className="eyebrow">01 / IN MY OWN VOICE</p>
+            <p className="eyebrow">01 / IN MY OWN OPINION</p>
             <h2>
               Things to share.
               <br />
@@ -199,7 +201,7 @@ export default function Home() {
             </h2>
           </div>
           <div className="publishing-grid">
-            <article className="publishing-card publishing-video" data-reveal>
+            <article id="youtube" className="publishing-card publishing-video" data-reveal>
               <div className="publishing-label">
                 <SocialIcon name="youtube" />
                 <p className="eyebrow">YOUTUBE</p>
@@ -223,7 +225,7 @@ export default function Home() {
                 Watch on YouTube
               </a>
             </article>
-            <article className="publishing-card publishing-audio" data-reveal>
+            <article id="podcast" className="publishing-card publishing-audio" data-reveal>
               <div className="publishing-label">
                 <SocialIcon name="applepodcasts" />
                 <p className="eyebrow">PODCAST</p>
@@ -279,18 +281,35 @@ export default function Home() {
             </article>
           </div>
         </section>
-        <section id="portfolio" className="portfolio-section" aria-labelledby="portfolio-heading">
-          <div className="portfolio-heading" data-reveal>
-            <h2 id="portfolio-heading"><em>Portfolio.</em></h2>
+        <span id="portfolio" aria-hidden="true" />
+        <section id="projects" className="projects-section" aria-labelledby="projects-heading">
+          <div className="projects-heading" data-reveal>
+            <h2 id="projects-heading"><em>Projects.</em></h2>
           </div>
-          <article className="portfolio-entry" data-reveal>
-            <div className="portfolio-copy">
+          <article className="projects-entry" data-reveal>
+            <div className="projects-copy">
               <h3>Mortgage Map</h3>
               <p>An interactive guide to mortgages and fixed income: the cash flows, the markets, and the decisions that connect them.</p>
               <Link href="/portfolio/mortgage-map" className="text-link">Explore the map <span aria-hidden="true">↗</span></Link>
             </div>
-            <div className="portfolio-map-preview" aria-label="Six branches of the Mortgage Map">
-              <span>Mortgage &amp; MBS</span><span aria-hidden="true">↓</span><div><span>Loan &amp; pool basics</span><span>Prepayment</span><span>Securitization &amp; trading</span><span>Cash flows &amp; valuation</span><span>Risk &amp; hedging</span><span>CMO &amp; structure</span></div>
+            <div className="project-map-preview" aria-label="Explore the Mortgage Map">
+              <div className="project-map-path" aria-label="From borrower decisions to valuation">
+                {mortgage_preview_path.map((step, i) => (
+                  <Link href={`/portfolio/mortgage-map#concept=${step.id}`} key={step.id}>
+                    <span className="project-step-number">0{i + 1}</span>
+                    <strong>{step.title}</strong>
+                    <span>{step.detail}</span>
+                    {i < mortgage_preview_path.length - 1 && <span className="project-path-arrow" aria-hidden="true">→</span>}
+                  </Link>
+                ))}
+              </div>
+              <div className="project-domain-links">
+                {mortgage_domains.map((domain) => (
+                  <Link href={`/portfolio/mortgage-map#concept=${domain.entry}`} key={domain.id}>
+                    <span>{domain.number}</span>{domain.title}<span aria-hidden="true">↗</span>
+                  </Link>
+                ))}
+              </div>
             </div>
           </article>
         </section>
@@ -419,7 +438,7 @@ export default function Home() {
               href={profile.links.podcast}
               target="_blank"
               rel="noreferrer"
-              aria-label="Talking Laughs on Xiaoyuzhou"
+              aria-label="Talking Laughs podcast"
               title="Talking Laughs"
             >
               <SocialIcon name="applepodcasts" />

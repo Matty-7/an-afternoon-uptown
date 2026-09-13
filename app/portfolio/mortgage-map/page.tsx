@@ -16,11 +16,11 @@ export const metadata: Metadata = pageMetadata(
 export default function MortgageMapPage() {
   return (
     <main className="map-page" id="map-top">
-      <nav className="map-nav" aria-label="Portfolio navigation">
+      <nav className="map-nav" aria-label="Projects navigation">
         <Link href="/" className="brand-link" aria-label="Jingheng Huan home">
           <BrandMark />
         </Link>
-        <Link href="/#portfolio">← Portfolio</Link>
+        <Link href="/#projects">← Projects</Link>
       </nav>
       <header className="map-header">
         <h1>
