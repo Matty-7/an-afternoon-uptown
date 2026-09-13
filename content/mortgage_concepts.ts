@@ -1,5 +1,6 @@
 import { spread_topics, spread_sources, spread_concepts, spread_relationships } from './mortgage_spreads.ts';
 import { foundational_relationships } from './mortgage_relationships.ts';
+import { context_topics, context_sources, context_concepts, context_relationships, context_paths } from './mortgage_context.ts';
 import {
   atlas_topics,
   atlas_sources,
@@ -217,6 +218,7 @@ export const mortgage_topics = [
   ...atlas_topics,
   ...mechanism_topics,
   ...spread_topics,
+  ...context_topics,
 ];
 
 export const mortgage_sources: Record<
@@ -226,6 +228,7 @@ export const mortgage_sources: Record<
   ...atlas_sources,
   ...mechanism_sources,
   ...spread_sources,
+  ...context_sources,
   cfpb: {
     publisher: 'CFPB',
     title: 'How does paying down a mortgage work?',
@@ -3307,6 +3310,7 @@ const formula_additions: Record<
   },
 };
 export const mortgage_concepts: MortgageConcept[] = [
+  ...context_concepts,
   ...mechanism_concepts,
   ...spread_concepts,
   ...original_concepts.filter(
@@ -3325,6 +3329,7 @@ export const mortgage_concepts: MortgageConcept[] = [
 }));
 
 export const mortgage_relationships: MortgageRelationship[] = [
+  ...context_relationships,
   ...foundational_relationships,
   { id: 'spreads__nominal_spread', source: 'spreads', target: 'nominal_spread', label: 'compares two yields', reason: 'A nominal spread subtracts a stated benchmark yield from the security yield under aligned conventions.', kind: 'definition' },
   { id: 'nominal_spread__i_spread', source: 'nominal_spread', target: 'i_spread', label: 'uses a swap reference', reason: 'I-spread is a yield comparison using an interpolated swap par rate.', kind: 'definition' },
@@ -3520,10 +3525,12 @@ export const mortgage_relationships: MortgageRelationship[] = [
     id: "wala__psa",
     source: "wala",
     target: "psa",
-    label: "locates the ramp",
+    label: "summarizes seasoning",
     reason:
-      "Loan age locates a loan on the benchmark PSA schedule; PSA remains an assumption.",
-    kind: "definition",
+      "WALA summarizes a pool’s loan age, which helps interpret a PSA assumption. Individual loan ages locate loans on the standard CPR ramp.",
+    kind: "measurement",
+    sources: ['formulas', 'guide'],
+    conditions: 'A weighted-average age can hide a mixed-age pool. Applying the nonlinear capped ramp to WALA need not reproduce loan-level aggregation.',
   },
   {
     id: "cash_flows__wal",
@@ -3993,6 +4000,7 @@ export const mortgage_relationships: MortgageRelationship[] = [
 ];
 
 export const mortgage_paths = [
+  ...context_paths,
   ...mechanism_models,
   ...atlas_paths,
   {

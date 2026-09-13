@@ -80,6 +80,42 @@ test('the knowledge graph has no disconnected cluster, including cross-branch le
   }
 });
 
+function analytical_components(edges) {
+  const adjacency = new Map(mortgage_concepts.map((node) => [node.id, []]));
+  for (const edge of edges) {
+    adjacency.get(edge.source).push(edge.target);
+    adjacency.get(edge.target).push(edge.source);
+  }
+  const unseen = new Set(adjacency.keys());
+  const components = [];
+  while (unseen.size) {
+    const stack = [unseen.values().next().value];
+    const component = [];
+    while (stack.length) {
+      const id = stack.pop();
+      if (!unseen.delete(id)) continue;
+      component.push(id);
+      stack.push(...adjacency.get(id));
+    }
+    components.push(component);
+  }
+  return components;
+}
+
+test('the actual analytical relation network is one component, not just nodes with neighbors', () => {
+  const components = analytical_components(mortgage_relationships);
+  assert.equal(components.length, 1, JSON.stringify(components));
+  assert.equal(components[0].length, mortgage_concepts.length);
+  // The historical SMM/CPR island still has edges after removing its bridges.
+  // A degree-only check would pass; this traversal must detect its isolation.
+  const island = new Set(['smm', 'cpr']);
+  const severed = mortgage_relationships.filter(edge => island.has(edge.source) === island.has(edge.target));
+  for (const id of island) assert.ok(severed.some(edge => edge.source === id || edge.target === id));
+  const split = analytical_components(severed);
+  assert.ok(split.length > 1, 'Removing the bridges must break analytical connectivity');
+  assert.deepEqual(split.find(group => group.includes('smm')).sort(), ['cpr', 'smm']);
+});
+
 import {
   mortgage_topics,
   mortgage_relationships,

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MortgageCheck } from './mortgage_check';
 import { MortgageRelations } from './mortgage_relations';
 import { MortgageNavigator } from './mortgage_navigator';
+import { useAtlasExpansion } from './use_atlas_expansion';
 import type { KeyboardEvent, PointerEvent } from 'react';
 import {
   ArrowLeft,
@@ -102,6 +103,9 @@ export function MortgageMap({
   const [is_dragging, set_is_dragging] = useState(false);
   const [show_help, set_show_help] = useState(false);
   const [expanded, set_expanded] = useState(false);
+  const atlas_ref = useRef<HTMLElement>(null);
+  const expand_ref = useRef<HTMLButtonElement>(null);
+  useAtlasExpansion(expanded, atlas_ref, expand_ref);
   const canvas_ref = useRef<HTMLDivElement>(null);
   const reader_ref = useRef<HTMLElement>(null);
   const paths_ref = useRef<HTMLElement>(null);
@@ -236,29 +240,14 @@ export function MortgageMap({
     const target = reader.querySelector<HTMLElement>(
       reader_section === 'connections' ? '#concept-connections' : 'h2',
     );
-    reader.scrollTop = 0;
     target?.focus({ preventScroll: true });
-    if (target && reader_section === 'connections')
-      reader.scrollTop =
-        target.getBoundingClientRect().top -
-        reader.getBoundingClientRect().top -
-        20;
-  }, [reader_open, selected, reader_section]);
-
-  useEffect(() => {
-    if (!reader_open && !expanded) return;
-    const on_escape = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (reader_open) set_reader_open(false);
-        else set_expanded(false);
-        (canvas_ref.current ?? search_ref.current)?.focus({
-          preventScroll: true,
-        });
-      }
-    };
-    window.addEventListener('keydown', on_escape);
-    return () => window.removeEventListener('keydown', on_escape);
-  }, [reader_open, expanded]);
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const top_inset = expanded ? 156 : 88;
+      if (rect.top < top_inset || rect.bottom > window.innerHeight - 24)
+        target.scrollIntoView({ block: 'start' });
+    }
+  }, [reader_open, selected, reader_section, expanded]);
 
   function choose_concept(id: string, trigger?: HTMLButtonElement) {
     if (!concept_index.has(id)) return;
@@ -290,13 +279,24 @@ export function MortgageMap({
   }
   function close_reader() {
     set_reader_open(false);
-    if (return_focus.current?.isConnected)
-      return_focus.current.focus({ preventScroll: true });
-    else
-      (canvas_ref.current ?? search_ref.current)?.focus({
-        preventScroll: true,
-      });
+    const target = return_focus.current?.isConnected
+      ? return_focus.current
+      : (canvas_ref.current ?? search_ref.current);
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: 'nearest' });
   }
+  useEffect(() => {
+    if (!reader_open && !expanded) return;
+    const on_escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (reader_open) close_reader();
+        else set_expanded(false);
+      }
+    };
+    window.addEventListener('keydown', on_escape);
+    return () => window.removeEventListener('keydown', on_escape);
+  }, [reader_open, expanded]);
+
   function follow_history(offset: number) {
     const cursor = trail.cursor + offset;
     if (cursor < 0 || cursor >= trail.ids.length) return;
@@ -477,6 +477,9 @@ export function MortgageMap({
 
   return (
     <section
+      ref={atlas_ref}
+      role={expanded ? 'dialog' : 'region'}
+      aria-modal={expanded || undefined}
       className={`mortgage-atlas ${expanded ? 'is-expanded' : ''}`}
       aria-label="Interactive mortgage knowledge map"
     >
@@ -498,6 +501,7 @@ export function MortgageMap({
             How to explore <ChevronDown size={15} />
           </button>
           <button
+            ref={expand_ref}
             className="atlas-expand-button"
             onClick={() => set_expanded(!expanded)}
             aria-label={expanded ? 'Exit expanded map' : 'Expand map'}
@@ -675,7 +679,9 @@ export function MortgageMap({
       <div
         className={`atlas-workspace ${reader_open && concept ? 'has-reader' : ''}`}
       >
-        <div className="atlas-map-column">
+        <div
+          className={`atlas-map-column ${view === 'map' || view === 'connections' ? 'is-spatial' : ''}`}
+        >
           {view === 'paths' ? (
             <section
               className="atlas-models"
@@ -785,7 +791,11 @@ export function MortgageMap({
                         ? 'Products'
                         : item.id === 'maturities'
                           ? 'Time & maturity'
-                          : 'Currencies'}
+                          : item.id === 'dates'
+                            ? 'Dates'
+                            : item.id === 'curves'
+                              ? 'Curves'
+                              : 'Currencies'}
                   </button>
                 ))}
               </div>
@@ -1381,7 +1391,10 @@ export function MortgageMap({
             <MortgageRelations
               relations={relations}
               choose_concept={choose_concept}
-              explore={() => set_view('connections')}
+              explore={() => {
+                set_view('connections');
+                set_reader_section('connections');
+              }}
             />
             <MortgageCheck
               key={concept.id}

@@ -28,9 +28,6 @@
 /* Reading mechanisms uses the same paper and type as the spatial map. */
 .atlas-models {
   padding: 24px 28px 32px;
-  max-height: 820px;
-  overflow-y: auto;
-  min-height: 520px;
   scroll-behavior: smooth;
 }
 .atlas-models h2 {
@@ -223,11 +220,6 @@
 .has-reader .atlas-model-cards {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.is-expanded .atlas-models {
-  min-height: 0;
-  max-height: none;
-  height: 100%;
-}
 @media (max-width: 1000px) {
   .atlas-model-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -236,8 +228,6 @@
 @media (max-width: 600px) {
   .atlas-models {
     padding: 20px 16px;
-    min-height: 420px;
-    max-height: 800px;
   }
   .atlas-model-cards,
   .has-reader .atlas-model-cards {
@@ -540,18 +530,21 @@
 .atlas-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  align-items: start;
   border-top: 1px solid var(--atlas-line);
 }
 .atlas-workspace.has-reader {
-  grid-template-columns: minmax(0, 1fr) 356px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr);
 }
 .atlas-map-column {
   min-width: 0;
 }
+.atlas-map-column.is-spatial {
+  position: sticky;
+  top: 16px;
+}
 .atlas-canvas {
-  height: 70vh;
-  min-height: 600px;
-  max-height: 850px;
+  height: clamp(320px, calc(100dvh - 330px), 620px);
   overflow: hidden;
   position: relative;
   background-color: #f6f0e0;
@@ -905,12 +898,9 @@
 .atlas-reader {
   border-left: 1px solid var(--atlas-line);
   padding: 0 24px 28px;
-  max-height: calc(min(70vh, 850px) + 46px);
-  min-height: 646px;
-  overflow: auto;
-  scrollbar-width: thin;
+  min-width: 0;
+  scroll-margin-top: 24px;
   background: #fffaf0;
-  overscroll-behavior: contain;
 }
 .atlas-reader-top {
   display: flex;
@@ -950,6 +940,10 @@
   margin: 0;
   letter-spacing: -0.025em;
   outline: none;
+  scroll-margin-top: 88px;
+}
+.atlas-reader-relations {
+  scroll-margin-top: 88px;
 }
 .atlas-reader-subtitle {
   font-size: 12px;
@@ -958,7 +952,7 @@
   line-height: 1.5;
 }
 .atlas-reader-summary {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.8;
   margin: 0 0 25px;
 }
@@ -1171,8 +1165,6 @@
 @media (max-width: 600px) {
   .atlas-browse-items {
     grid-template-columns: 1fr;
-    max-height: 240px;
-    overflow-y: auto;
   }
 }
 .atlas-further button {
@@ -1222,11 +1214,7 @@
   margin-top: 5px;
 }
 .atlas-list {
-  max-height: 70vh;
-  min-height: 600px;
-  overflow: auto;
   padding: 26px;
-  scrollbar-width: thin;
 }
 .atlas-list-domain {
   padding: 0 0 32px;
@@ -1451,7 +1439,7 @@
     padding: 0 5vw 48px;
   }
   .atlas-workspace.has-reader {
-    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-columns: minmax(0, 1fr) 480px;
   }
 }
 @media (max-width: 1100px) {
@@ -1462,7 +1450,7 @@
     gap: 12px 28px;
   }
   .atlas-workspace.has-reader {
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 360px;
   }
   .atlas-reader {
     padding: 0 18px 25px;
@@ -1570,9 +1558,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .atlas-canvas {
-    height: 62vh;
-    min-height: 440px;
-    max-height: 660px;
+    height: clamp(300px, 48dvh, 440px);
   }
   .atlas-canvas-caption {
     left: 17px;
@@ -1617,8 +1603,6 @@
   .atlas-reader {
     border-left: 0;
     border-top: 1px solid var(--atlas-line);
-    min-height: 0;
-    max-height: 65vh;
     padding: 0 22px 25px;
   }
   .atlas-reader h2 {
@@ -1632,8 +1616,6 @@
   }
   .atlas-list {
     padding: 20px 16px;
-    min-height: 440px;
-    max-height: 62vh;
   }
   .atlas-list-topic {
     margin-left: 0;
@@ -1739,18 +1721,24 @@
   overflow: auto;
   box-shadow: 0 0 0 24px #273a3070;
 }
+.is-expanded .atlas-intro {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--atlas-paper);
+}
+.is-expanded .atlas-map-column.is-spatial {
+  top: 72px;
+}
+.is-expanded .atlas-reader h2,
+.is-expanded #concept-connections {
+  scroll-margin-top: 156px;
+}
+.is-expanded .atlas-reader-top {
+  top: 64px;
+}
 .is-expanded .atlas-canvas {
-  height: calc(100dvh - 270px);
-  max-height: none;
-  min-height: 440px;
-}
-.is-expanded .atlas-reader {
-  max-height: calc(100dvh - 224px);
-  min-height: 0;
-}
-.is-expanded .atlas-list {
-  max-height: calc(100dvh - 270px);
-  min-height: 440px;
+  height: clamp(300px, calc(100dvh - 310px), 720px);
 }
 @media (max-width: 800px) {
   .atlas-intro-actions {
@@ -1765,33 +1753,24 @@
   .atlas-intro p {
     line-height: 1.7;
   }
+  .atlas-workspace.has-reader {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .atlas-map-column.is-spatial {
+    position: static;
+  }
   .atlas-reader {
-    position: fixed;
-    bottom: 12px;
-    left: 12px;
-    right: 12px;
-    z-index: 90;
-    max-height: 58dvh;
-    box-shadow: 0 -12px 45px #273a3030;
-    border: 1px solid #273a3038;
-    border-radius: 8px 8px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--atlas-line);
   }
   .mortgage-atlas.is-expanded {
     inset: 5px;
   }
-  .is-expanded .atlas-reader {
-    max-height: 58dvh;
-  }
-  .is-expanded .atlas-canvas {
-    height: calc(100dvh - 310px);
-    min-height: 320px;
-  }
   .is-expanded .atlas-intro {
     padding: 10px 14px;
   }
-  .is-expanded .atlas-list {
-    max-height: calc(100dvh - 310px);
-    min-height: 320px;
+  .is-expanded .atlas-canvas {
+    height: clamp(300px, 48dvh, 440px);
   }
 }
 
@@ -1898,16 +1877,13 @@
 }
 .atlas-comparison {
   padding: 0 26px 28px;
-  max-height: 920px;
-  overflow: auto;
   scroll-behavior: smooth;
 }
 .atlas-comparison-tabs {
   display: flex;
-  gap: 24px;
+  gap: 0 24px;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--atlas-line);
-  position: sticky;
-  top: 0;
   background: var(--atlas-paper);
   z-index: 1;
 }
@@ -2031,9 +2007,6 @@
   display: none;
 }
 @media (min-width: 801px) {
-  .atlas-comparison {
-    min-height: 640px;
-  }
   .atlas-comparison-table td:nth-child(5) {
     font-size: 11px;
   }
@@ -2074,11 +2047,9 @@
   }
   .atlas-comparison {
     padding: 0 16px 24px;
-    max-height: 850px;
   }
   .atlas-comparison-tabs {
-    gap: 18px;
-    overflow: auto;
+    gap: 0 18px;
   }
   .atlas-comparison-tabs button {
     white-space: nowrap;
@@ -2156,65 +2127,6 @@
   }
 }
 
-/* Expanded mode reserves room for navigation instead of placing it below the window. */
-.mortgage-atlas.is-expanded {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.is-expanded .atlas-workspace {
-  flex: 1;
-  min-height: 0;
-}
-.is-expanded .atlas-map-column {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-.is-expanded .atlas-graph-shell {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-.is-expanded .atlas-canvas {
-  flex: 1;
-  height: auto;
-  min-height: 120px;
-  max-height: none;
-}
-.is-expanded .atlas-canvas-caption,
-.is-expanded .atlas-canvas-dock,
-.is-expanded .atlas-legend {
-  flex-shrink: 0;
-}
-.is-expanded .atlas-reader {
-  min-height: 0;
-  max-height: none;
-  height: 100%;
-}
-.is-expanded .atlas-list,
-.is-expanded .atlas-comparison {
-  min-height: 0;
-  max-height: none;
-  height: 100%;
-}
-.is-expanded .atlas-paths {
-  display: none;
-}
-@media (max-width: 800px) {
-  .is-expanded .atlas-reader {
-    height: auto;
-    max-height: 58dvh;
-  }
-  .is-expanded .atlas-canvas {
-    min-height: 80px;
-  }
-  .is-expanded .atlas-canvas-caption {
-    min-height: 60px;
-    padding: 10px 14px;
-  }
-}
 @media (max-width: 800px) {
   .atlas-comparison-table tbody th:first-child {
     width: 100%;

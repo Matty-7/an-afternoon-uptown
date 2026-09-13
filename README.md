@@ -8,6 +8,8 @@ The project name is `jingheng-personal-website`. The GitHub repository is `Matty
 
 ## Development
 
+Use Node.js 22.18 or later; the content checker imports the shared TypeScript schema directly.
+
 ```sh
 npm ci
 npm run dev
@@ -19,6 +21,7 @@ npm run dev
 - `app/page.tsx`: the current Projects section. Its Mortgage Map preview metadata is in `content/mortgage_domains.ts`. The legacy `content/projects.json` is not a live homepage source.
 - `content/channels.json`: YouTube and podcast information, with verified podcast episode links. English episode titles are editorial translations of the original Mandarin titles.
 - `content/newsletter_links.json`: the live Journal index. `lib/publishing.ts` filters draft and future entries at request time. `/journal/[slug]` redirects to the entry’s `external_url`; `/feed.xml` lists those external articles. Legacy essay text in `content/posts.json` is not rendered by these routes and must stay out of client imports.
+- `lib/newsletter_schema.ts`: the shared build/runtime boundary for link metadata, real calendar dates, unique slugs and provider URLs. The build rejects invalid records; the runtime excludes invalid records and all members of a duplicate-slug group.
 - `app/sitemap.ts` and `app/robots.ts`: search discovery, with only published journal entries included. See [search and indexing](docs/seo.md).
 - `content/books.json`: ten covers, edition details, and short notes for the bookshelf.
 - `content/music.json`: ten real Apple preview URLs and full-song links. Preview availability can change; graceful failure links remain available.
