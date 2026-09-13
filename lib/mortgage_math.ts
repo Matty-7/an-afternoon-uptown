@@ -5,6 +5,26 @@ import { mortgage_concepts } from '../content/mortgage_concepts.ts';
 // never a TeX parser or visitor-supplied markup. Fonts are bundled locally.
 export const mortgage_math: Record<string, { tex: string; variables: string }> =
   {
+    dti: {
+      tex: String.raw`\mathrm{DTI}=\frac{D_{\mathrm{monthly}}}{Y_{\mathrm{monthly}}}`,
+      variables:
+        'D: included monthly debt payments; Y: gross monthly income, in the same currency. Multiply the ratio by 100 for a percentage.',
+    },
+    haircut: {
+      tex: String.raw`h=1-\frac{C}{V}`,
+      variables:
+        'C: cash advanced; V: collateral market value, in the same currency; h: haircut as a decimal under this convention.',
+    },
+    real_return: {
+      tex: String.raw`R_{\mathrm{real}}=\frac{1+R_{\mathrm{nominal}}}{1+\pi}-1`,
+      variables:
+        'R: holding-period return as a decimal; π: inflation over that same period. Returns and inflation must use a consistent horizon.',
+    },
+    expected_loss: {
+      tex: String.raw`\mathrm{EL}=\mathrm{PD}\times\mathrm{LGD}\times\mathrm{EAD}`,
+      variables:
+        'PD: default probability; LGD: loss fraction conditional on default; EAD: exposure at default in currency. EL is a loan-level currency amount under consistent assumptions.',
+    },
     principal_interest: {
       tex: String.raw`I_n=B_{n-1}r`,
       variables:

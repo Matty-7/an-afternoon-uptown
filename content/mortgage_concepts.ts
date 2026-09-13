@@ -6,6 +6,10 @@ import {
   atlas_relationships,
   atlas_paths,
 } from './atlas_extensions.ts';
+import {
+  mechanism_topics, mechanism_sources, mechanism_concepts,
+  mechanism_relationships, mechanism_models,
+} from './mortgage_mechanisms.ts';
 // Original public educational summaries. No employer data or implementation details.
 export type MortgageConcept = {
   id: string;
@@ -258,6 +262,7 @@ export const mortgage_topics = [
     }))
     .filter((t) => t.concepts.length),
   ...atlas_topics,
+  ...mechanism_topics,
 ];
 
 export const mortgage_sources: Record<
@@ -265,6 +270,7 @@ export const mortgage_sources: Record<
   { publisher: string; title: string; url: string }
 > = {
   ...atlas_sources,
+  ...mechanism_sources,
   cfpb: {
     publisher: 'CFPB',
     title: 'How does paying down a mortgage work?',
@@ -3346,6 +3352,7 @@ const formula_additions: Record<
   },
 };
 export const mortgage_concepts: MortgageConcept[] = [
+  ...mechanism_concepts,
   ...original_concepts.filter(
     (c) => !atlas_concepts.some((n) => n.id === c.id),
   ),
@@ -3362,6 +3369,7 @@ export const mortgage_concepts: MortgageConcept[] = [
 }));
 
 export const mortgage_relationships: MortgageRelationship[] = [
+  ...mechanism_relationships,
   ...atlas_relationships,
   {
     id: "prepayments__reinvestment",
@@ -4019,6 +4027,7 @@ export const mortgage_relationships: MortgageRelationship[] = [
 ];
 
 export const mortgage_paths = [
+  ...mechanism_models,
   ...atlas_paths,
   {
     id: 'borrower_to_hedge',

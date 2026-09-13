@@ -162,6 +162,7 @@ export default function Home() {
         <div className="nav-links">
           <a href="#channels">Channels</a>
           <Link href="/journal">Newsletters</Link>
+          <a href="#portfolio">Portfolio</a>
           <a href="#records">Music</a>
           <a href="#films">Films</a>
           <a href="#books">Books</a>
@@ -280,19 +281,16 @@ export default function Home() {
         </section>
         <section id="portfolio" className="portfolio-section" aria-labelledby="portfolio-heading">
           <div className="portfolio-heading" data-reveal>
-            <p className="eyebrow">PORTFOLIO</p>
             <h2 id="portfolio-heading"><em>Portfolio.</em></h2>
           </div>
           <article className="portfolio-entry" data-reveal>
             <div className="portfolio-copy">
-              <p className="eyebrow">01 / INTERACTIVE KNOWLEDGE MAP</p>
               <h3>Mortgage Map</h3>
-              <p>How a home loan becomes a security, how borrowers reshape its cash flows, and how the risks connect. A map to explore one concept at a time.</p>
+              <p>An interactive guide to mortgages and fixed income: the cash flows, the markets, and the decisions that connect them.</p>
               <Link href="/portfolio/mortgage-map" className="text-link">Explore the map <span aria-hidden="true">↗</span></Link>
             </div>
             <div className="portfolio-map-preview" aria-label="Six branches of the Mortgage Map">
               <span>Mortgage &amp; MBS</span><span aria-hidden="true">↓</span><div><span>Loan &amp; pool basics</span><span>Prepayment</span><span>Securitization &amp; trading</span><span>Cash flows &amp; valuation</span><span>Risk &amp; hedging</span><span>CMO &amp; structure</span></div>
-              <p>Follow the connections.</p>
             </div>
           </article>
         </section>

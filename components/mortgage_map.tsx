@@ -10,7 +10,8 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
-  Check,
+  Route,
+  Link2,
   Table2,
   ChevronDown,
   Focus,
@@ -47,8 +48,15 @@ import {
 import type { Camera, GraphNode } from '@/lib/mortgage_graph';
 
 import { atlas_comparisons } from '@/content/atlas_extensions';
+import { mechanism_models } from '@/content/mortgage_mechanisms';
+import {
+  concept_hash,
+  read_concept_hash,
+  visit_concept,
+} from '@/lib/mortgage_reading';
+import type { ReadingTrail } from '@/lib/mortgage_reading';
 
-type View = 'map' | 'connections' | 'list' | 'compare';
+type View = 'map' | 'connections' | 'list' | 'compare' | 'paths';
 const branch_index = new Map(
   mortgage_branches.map((branch) => [branch.id, branch]),
 );
@@ -66,6 +74,9 @@ export function MortgageMap({
   const [view, set_view] = useState<View>('map');
   const [selected, set_selected] = useState<string | null>(null);
   const [reader_open, set_reader_open] = useState(false);
+  const [trail, set_trail] = useState<ReadingTrail>({ ids: [], cursor: -1 });
+  const [location_ready, set_location_ready] = useState(false);
+  const [link_status, set_link_status] = useState('');
   const [query, set_query] = useState('');
   const [search_open, set_search_open] = useState(false);
   const [search_cursor, set_search_cursor] = useState(0);
@@ -77,6 +88,7 @@ export function MortgageMap({
   const [expanded, set_expanded] = useState(false);
   const canvas_ref = useRef<HTMLDivElement>(null);
   const reader_ref = useRef<HTMLElement>(null);
+  const paths_ref = useRef<HTMLElement>(null);
   const search_ref = useRef<HTMLInputElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pending_focus = useRef<string | null>(null);
@@ -89,6 +101,7 @@ export function MortgageMap({
   const return_focus = useRef<HTMLButtonElement | null>(null);
   const concept = selected ? concept_index.get(selected) : undefined;
   const path = mortgage_paths.find((item) => item.id === path_id);
+  const model = mechanism_models.find((item) => item.id === path_id);
   const results = useMemo(() => search_concepts(query).slice(0, 8), [query]);
   const connection_selection = view === 'connections' ? selected : null;
   const graph = useMemo(
@@ -118,7 +131,8 @@ export function MortgageMap({
 
   useEffect(() => {
     const canvas = canvas_ref.current;
-    if (!canvas || view === 'list' || view === 'compare') return;
+    if (!canvas || view === 'list' || view === 'compare' || view === 'paths')
+      return;
     const observer = new ResizeObserver(([entry]) => {
       if (!has_measured.current) {
         previous_layout.current = null;
@@ -132,6 +146,37 @@ export function MortgageMap({
     observer.observe(canvas);
     return () => observer.disconnect();
   }, [view]);
+  useEffect(() => {
+    const restore_location = () => {
+      const id = read_concept_hash(
+        window.location.hash,
+        new Set(concept_index.keys()),
+      );
+      if (id) {
+        set_selected(id);
+        set_trail((current) => visit_concept(current, id));
+        set_reader_open(true);
+        set_view('connections');
+      }
+    };
+    const frame = window.requestAnimationFrame(() => {
+      restore_location();
+      set_location_ready(true);
+    });
+    window.addEventListener('hashchange', restore_location);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('hashchange', restore_location);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!location_ready) return;
+    const url = new URL(window.location.href);
+    url.hash = selected ? concept_hash(selected) : '';
+    window.history.replaceState(window.history.state, '', url);
+  }, [selected, location_ready]);
+
   useEffect(() => {
     const key = `${view}:${connection_selection}:${depth}:${branch_filter}:${topic_filter}`;
     const previous = previous_layout.current;
@@ -183,7 +228,7 @@ export function MortgageMap({
       if (event.key === 'Escape') {
         if (reader_open) set_reader_open(false);
         else set_expanded(false);
-        canvas_ref.current?.focus({ preventScroll: true });
+        (canvas_ref.current ?? search_ref.current)?.focus({ preventScroll: true });
       }
     };
     window.addEventListener('keydown', on_escape);
@@ -192,6 +237,8 @@ export function MortgageMap({
 
   function choose_concept(id: string, trigger?: HTMLButtonElement) {
     if (!concept_index.has(id)) return;
+    set_trail((current) => visit_concept(current, id));
+    set_link_status('');
     if (trigger) return_focus.current = trigger;
     if (view === 'map') {
       const node = positions.get(id);
@@ -219,7 +266,23 @@ export function MortgageMap({
     set_reader_open(false);
     if (return_focus.current?.isConnected)
       return_focus.current.focus({ preventScroll: true });
-    else canvas_ref.current?.focus({ preventScroll: true });
+    else (canvas_ref.current ?? search_ref.current)?.focus({ preventScroll: true });
+  }
+  function follow_history(offset: number) {
+    const cursor = trail.cursor + offset;
+    if (cursor < 0 || cursor >= trail.ids.length) return;
+    set_trail({ ...trail, cursor });
+    choose_concept(trail.ids[cursor]);
+  }
+  async function copy_concept_link() {
+    try {
+      const url = new URL(window.location.href);
+      url.hash = concept_hash(selected!);
+      await navigator.clipboard.writeText(url.href);
+      set_link_status('Link copied');
+    } catch {
+      set_link_status('Use the link in your address bar.');
+    }
   }
   function focus_selected() {
     const node = selected ? positions.get(selected) : undefined;
@@ -258,12 +321,13 @@ export function MortgageMap({
   }
   function choose_path(id: string) {
     set_path_id(id);
-    const next = mortgage_paths.find((p) => p.id === id);
-    if (next) {
-      set_view('connections');
-      set_selected(next.steps[0]);
-      set_reader_open(true);
-    }
+    set_view('paths');
+    set_reader_open(false);
+    requestAnimationFrame(() =>
+      paths_ref.current
+        ?.querySelector<HTMLElement>('h2')
+        ?.focus({ preventScroll: true }),
+    );
   }
   function activate_node(node: GraphNode, trigger: HTMLButtonElement) {
     if (node.kind === 'concept') choose_concept(node.id, trigger);
@@ -389,7 +453,6 @@ export function MortgageMap({
     >
       <div className="atlas-intro">
         <div>
-          <span className="atlas-kicker">A FIELD GUIDE, CONNECTED</span>
           <p>
             <strong>{mortgage_concepts.length}</strong> concepts <span>·</span>{' '}
             <strong>{mortgage_branches.length}</strong> domains <span>·</span>{' '}
@@ -419,7 +482,7 @@ export function MortgageMap({
       {show_help && (
         <div className="atlas-help">
           <p>
-            Start with a domain, search for a concept, or follow a reading path.{' '}
+            <strong>Paths</strong> follows a financial mechanism across domains.{' '}
             <strong>Map</strong> shows the hierarchy;{' '}
             <strong>Connections</strong> puts one concept between what informs
             it and what it affects. <strong>Compare</strong> puts spreads,
@@ -441,7 +504,7 @@ export function MortgageMap({
             ref={search_ref}
             type="search"
             aria-label="Search mortgage concepts"
-            placeholder="Find a concept, e.g. OAS or burnout"
+            placeholder="Find a concept, e.g. OAS"
             value={query}
             onChange={(e) => {
               set_query(e.target.value);
@@ -490,6 +553,16 @@ export function MortgageMap({
         </div>
         <div className="atlas-view-toggle" aria-label="Reading view">
           <button
+            aria-pressed={view === 'paths'}
+            onClick={() => {
+              set_view('paths');
+              set_reader_open(false);
+            }}
+          >
+            <Route size={16} />
+            <span>Paths</span>
+          </button>
+          <button
             aria-pressed={view === 'compare'}
             onClick={() => {
               set_view('compare');
@@ -506,7 +579,10 @@ export function MortgageMap({
           <button
             aria-pressed={view === 'connections'}
             onClick={() => {
-              if (!selected) set_selected('prepayments');
+              if (!selected) {
+                set_selected('prepayments');
+                set_trail((current) => visit_concept(current, 'prepayments'));
+              }
               set_view('connections');
             }}
           >
@@ -522,7 +598,7 @@ export function MortgageMap({
           </button>
         </div>
       </div>
-      {view !== 'compare' && (
+      {(view === 'map' || view === 'list') && (
         <div className="atlas-options">
           <div className="atlas-depth" aria-label="Map detail level">
             <Layers size={15} aria-hidden="true" />
@@ -571,7 +647,92 @@ export function MortgageMap({
         className={`atlas-workspace ${reader_open && concept ? 'has-reader' : ''}`}
       >
         <div className="atlas-map-column">
-          {view === 'compare' ? (
+          {view === 'paths' ? (
+            <section
+              className="atlas-models"
+              aria-label="Reading paths"
+              key={path_id || 'path_index'}
+              ref={paths_ref}
+            >
+              {path ? (
+                <>
+                  <button
+                    className="atlas-text-button"
+                    onClick={() => choose_path('')}
+                  >
+                    <ArrowLeft size={15} /> All paths
+                  </button>
+                  <h2 tabIndex={-1}>{path.title}</h2>
+                  <p className="atlas-model-premise">
+                    {model?.premise ?? path.description}
+                  </p>
+                  <ol className="atlas-model-steps">
+                    {path.steps.map((id, index) => {
+                      const node = concept_index.get(id)!;
+                      const previous = path.steps[index - 1];
+                      const edge = mortgage_relationships.find(
+                        (e) =>
+                          (e.source === previous && e.target === id) ||
+                          (e.source === id && e.target === previous),
+                      );
+                      return (
+                        <li key={id}>
+                          <span className="atlas-step-number">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <div>
+                            <button
+                              onClick={(e) =>
+                                choose_concept(id, e.currentTarget)
+                              }
+                              aria-current={
+                                selected === id && reader_open
+                                  ? 'step'
+                                  : undefined
+                              }
+                            >
+                              {node.title}
+                              <ArrowUpRight size={16} />
+                            </button>
+                            <p>
+                              {model?.explanations[index] ??
+                                (index === 0 ? node.summary : edge?.reason)}
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                  {model && (
+                    <div className="atlas-model-boundary">
+                      <strong>Where this can change</strong>
+                      <p>{model.boundary}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h2 tabIndex={-1}>Follow a mechanism.</h2>
+                  <div className="atlas-model-cards">
+                    {mortgage_paths.map((item, index) => (
+                      <button
+                        key={item.id}
+                        onClick={() => choose_path(item.id)}
+                      >
+                        <span>
+                          {String(index + 1).padStart(2, '0')}
+                          <ArrowUpRight size={17} />
+                        </span>
+                        <strong>{item.title}</strong>
+                        <p>{item.description}</p>
+                        <small>{item.steps.length} concepts</small>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </section>
+          ) : view === 'compare' ? (
             <div
               className="atlas-comparison"
               aria-label="Financial comparisons"
@@ -706,24 +867,15 @@ export function MortgageMap({
           ) : (
             <div className="atlas-graph-shell">
               <div className="atlas-canvas-caption">
-                <span>
-                  {view === 'connections'
-                    ? 'CONNECTION STUDY'
-                    : branch_filter === 'all'
-                      ? 'THE WHOLE PICTURE'
-                      : topic_filter === 'all'
-                        ? 'DOMAIN STUDY'
-                        : 'TOPIC STUDY'}
-                </span>
                 <p>
                   {view === 'connections'
                     ? concept?.title
                     : branch_filter === 'all'
                       ? depth === 0
-                        ? 'Ten ways into one subject'
+                        ? 'All domains'
                         : depth === 1
-                          ? 'A closer look at the topics'
-                          : 'Follow the branches. Find the connections.'
+                          ? 'All topics'
+                          : 'All concepts'
                       : topic_filter === 'all'
                         ? branch_index.get(branch_filter)?.title
                         : topic_index.get(topic_filter)?.title}
@@ -863,13 +1015,10 @@ export function MortgageMap({
                     >
                       {node.kind === 'root' ? (
                         <>
-                          <span className="atlas-node-eyebrow">
-                            A CONNECTED FIELD GUIDE
-                          </span>
                           <strong>
                             Mortgage <em>Map.</em>
                           </strong>
-                          <small>One subject. Many moving parts.</small>
+                          <small>Borrowers, securities and risk</small>
                         </>
                       ) : (
                         <>
@@ -1002,23 +1151,25 @@ export function MortgageMap({
               </div>
             </div>
           )}
-          <div className="atlas-legend">
-            <span>
-              <i />
-              Hierarchy
-            </span>
-            <span>
-              <i className="relationship-key" />
-              Directed relationship
-            </span>
-            <span>
-              <i className="comparison-key" />
-              Comparison
-            </span>
-            <button onClick={overview}>
-              Back to overview <ArrowUpRight size={13} />
-            </button>
-          </div>
+          {(view === 'map' || view === 'connections') && (
+            <div className="atlas-legend">
+              <span>
+                <i />
+                Hierarchy
+              </span>
+              <span>
+                <i className="relationship-key" />
+                Directed relationship
+              </span>
+              <span>
+                <i className="comparison-key" />
+                Comparison
+              </span>
+              <button onClick={overview}>
+                Back to overview <ArrowUpRight size={13} />
+              </button>
+            </div>
+          )}
         </div>
         {reader_open && concept && (
           <aside
@@ -1036,12 +1187,77 @@ export function MortgageMap({
                 <X size={18} />
               </button>
             </div>
+            <div
+              className="atlas-reader-navigation"
+              aria-label="Concept history"
+            >
+              <button
+                onClick={() => follow_history(-1)}
+                disabled={trail.cursor <= 0}
+                aria-label="Previous concept"
+              >
+                <ArrowLeft size={15} /> Back
+              </button>
+              <button
+                onClick={() => follow_history(1)}
+                disabled={trail.cursor >= trail.ids.length - 1}
+                aria-label="Next concept in history"
+              >
+                <ArrowRight size={15} />
+              </button>
+              <button onClick={copy_concept_link}>
+                <Link2 size={14} /> Copy link
+              </button>
+              <output>{link_status}</output>
+            </div>
             <p className="atlas-reader-topic">
               {topic_index.get(concept.topic)?.title}
             </p>
             <h2 tabIndex={-1}>{concept.title}</h2>
             <p className="atlas-reader-subtitle">{concept.subtitle}</p>
             <p className="atlas-reader-summary">{concept.summary}</p>
+            {path && path.steps.includes(concept.id) && (
+              <div className="atlas-reader-path">
+                <button
+                  onClick={() => {
+                    set_view('paths');
+                    set_reader_open(false);
+                  }}
+                >
+                  <Route size={14} /> {path.title}
+                </button>
+                <div>
+                  <span>
+                    Step {path.steps.indexOf(concept.id) + 1} of{' '}
+                    {path.steps.length}
+                  </span>
+                  <button
+                    disabled={path.steps.indexOf(concept.id) === 0}
+                    onClick={() =>
+                      choose_concept(
+                        path.steps[path.steps.indexOf(concept.id) - 1],
+                      )
+                    }
+                    aria-label="Previous path step"
+                  >
+                    <ArrowLeft size={15} />
+                  </button>
+                  <button
+                    disabled={
+                      path.steps.indexOf(concept.id) === path.steps.length - 1
+                    }
+                    onClick={() =>
+                      choose_concept(
+                        path.steps[path.steps.indexOf(concept.id) + 1],
+                      )
+                    }
+                    aria-label="Next path step"
+                  >
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
             {concept.formula && (
               <div className="atlas-formula">
                 <span>THE RELATIONSHIP</span>
@@ -1171,91 +1387,6 @@ export function MortgageMap({
               })}
             </section>
           </aside>
-        )}
-      </div>
-      <div className="atlas-paths">
-        <div className="atlas-path-heading">
-          <div>
-            <span className="atlas-kicker">FOLLOW A THREAD</span>
-            <h2>Start with a question.</h2>
-          </div>
-          <label>
-            <span className="sr-only">Choose a reading path</span>
-            <select
-              aria-label="Choose a reading path"
-              value={path_id}
-              onChange={(e) => choose_path(e.target.value)}
-            >
-              <option value="">Choose a reading path</option>
-              {mortgage_paths.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {path ? (
-          <div className="atlas-active-path">
-            <p>{path.description}</p>
-            <ol>
-              {path.steps.map((id, index) => (
-                <li key={id}>
-                  <button
-                    aria-current={selected === id ? 'step' : undefined}
-                    onClick={(e) => {
-                      set_view('connections');
-                      choose_concept(id, e.currentTarget);
-                    }}
-                  >
-                    <span>{String(index + 1).padStart(2, '0')}</span>
-                    {concept_index.get(id)?.title}
-                    {selected === id && <Check size={14} />}
-                  </button>
-                  {index < path.steps.length - 1 && (
-                    <ArrowRight size={14} aria-hidden="true" />
-                  )}
-                </li>
-              ))}
-            </ol>
-            <div className="atlas-path-controls">
-              <button
-                disabled={path.steps.indexOf(selected ?? '') <= 0}
-                onClick={() =>
-                  choose_concept(path.steps[path.steps.indexOf(selected!) - 1])
-                }
-              >
-                <ArrowLeft size={15} />
-                Previous step
-              </button>
-              <button
-                disabled={
-                  path.steps.indexOf(selected ?? '') < 0 ||
-                  path.steps.indexOf(selected ?? '') >= path.steps.length - 1
-                }
-                onClick={() =>
-                  choose_concept(path.steps[path.steps.indexOf(selected!) + 1])
-                }
-              >
-                Next step
-                <ArrowRight size={15} />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="atlas-path-cards">
-            {mortgage_paths.map((item, index) => (
-              <button key={item.id} onClick={() => choose_path(item.id)}>
-                <span>
-                  PATH {String(index + 1).padStart(2, '0')}{' '}
-                  <ArrowUpRight size={16} />
-                </span>
-                <strong>{item.title}</strong>
-                <small>{item.description}</small>
-                <em>{item.steps.length} connected concepts</em>
-              </button>
-            ))}
-          </div>
         )}
       </div>
     </section>

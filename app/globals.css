@@ -2387,6 +2387,9 @@ progress.audio-progress::-moz-progress-bar {
     gap: 16px;
     padding: 12px 5vw;
   }
+  .home-nav ~ main > section[id] {
+    scroll-margin-top: 96px;
+  }
   .home-nav .nav-links {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
