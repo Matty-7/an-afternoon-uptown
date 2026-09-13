@@ -11,7 +11,7 @@ Jingheng authorized independent review, automatic merge and public deployment on
 
 Merge-only triggering is not continuous monitoring. Daily inspection runs even when source is unchanged. NO_CHANGE ends that day's inspection, not the schedule. Both tasks remain enabled after success, duplicate events, no change or failure unless Jingheng explicitly asks otherwise. Do not create replacement tasks from a scheduled invocation.
 
-Repository: `Matty-7/an-afternoon-uptown`, ID `1360490618`. Resolve renames by this ID. Site: `appgprj_6a9ef28d91308191895df3c89d49f8d0`. Verify `.openai/hosting.json` with native Sites get_site; preserve `https://jinghenghuan.com` and its public audience. Never create another Site or change access controls.
+Repository: `Matty-7/Jingheng-PersonalWebsite`, ID `1360490618`. Resolve renames by this ID. Site: `appgprj_6a9ef28d91308191895df3c89d49f8d0`. Verify `.openai/hosting.json` with native Sites get_site; preserve `https://jinghenghuan.com` and its public audience. Never create another Site or change access controls.
 
 ## Publisher
 

@@ -32,8 +32,8 @@ export default function MortgageMapPage() {
       <p className="map-scope">
         An evolving guide to mortgages, MBS and the ideas around them, including
         commercial property and structured credit. Original explanations link to
-        public references. Relationships describe mechanisms under stated
-        conditions; examples are illustrative.
+        public references. Connections distinguish mechanisms, definitions,
+        measurements and comparisons; examples are illustrative.
       </p>
     </main>
   );

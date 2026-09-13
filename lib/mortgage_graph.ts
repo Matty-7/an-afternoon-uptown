@@ -271,12 +271,33 @@ export function connection_route(from: GraphNode, to: GraphNode) {
   return { path, x: side * 375, y: outer.y };
 }
 export function study_edges(selected: string) {
-  const seen = new Set<string>();
-  return mortgage_relationships.filter((edge) => {
-    if (edge.source !== selected && edge.target !== selected) return false;
-    const neighbor = edge.source === selected ? edge.target : edge.source;
-    if (seen.has(neighbor)) return false;
-    seen.add(neighbor);
-    return true;
+  return mortgage_relationships.filter(
+    (edge) => edge.source === selected || edge.target === selected,
+  );
+}
+
+// Geometry has one lane per neighbor; the reader retains every explanation.
+export function connection_lanes(selected: string) {
+  const groups = new Map<string, ReturnType<typeof study_edges>>();
+  for (const edge of study_edges(selected)) {
+    const other = edge.source === selected ? edge.target : edge.source;
+    groups.set(other, [...(groups.get(other) ?? []), edge]);
+  }
+  return [...groups.entries()].map(([neighbor, relationships]) => {
+    const first = relationships[0];
+    return {
+      id: `${selected}:${neighbor}`,
+      source: first.source,
+      target: first.target,
+      relationships,
+      directed: relationships.every(
+        (e) => e.kind !== 'comparison' && e.source === first.source,
+      ),
+      comparison: relationships.every((e) => e.kind === 'comparison'),
+      label:
+        relationships.length === 1
+          ? first.label
+          : `${relationships.length} relationships`,
+    };
   });
 }
