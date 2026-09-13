@@ -5,19 +5,42 @@ export async function check_mortgage_focus(tab, viewport = 'desktop') {
   assert.ok(['desktop', 'mobile', 'short'].includes(viewport));
   const url = `http://terminal.local:4173/__audit/mortgage_${viewport}`;
   assert.equal(await tab.url(), url);
-  const frame = tab.playwright.frameLocator('iframe');
+  return check_mortgage_focus_surface(
+    tab.playwright.frameLocator('iframe'),
+    viewport,
+  );
+}
+
+// Both the supported preview and CI exercise this same rendered journey.
+export async function check_mortgage_focus_surface(
+  frame,
+  viewport = 'desktop',
+) {
   const button = (name) => frame.getByRole('button', { name, exact: true });
   const reader = frame.getByRole('complementary', { name: 'Concept reader' });
-  const overflow = () => frame.locator('body').evaluate((el) => el.style.overflow);
+  const overflow = () =>
+    frame.locator('body').evaluate((el) => el.style.overflow);
   async function expect_focus(selector) {
     await frame.locator(`${selector}:focus`).waitFor({ state: 'attached' });
-    assert.equal(await frame.locator(':focus').count(), 1);
-    assert.equal(await frame.locator(`${selector}:focus`).count(), 1);
+    // Catch a later effect stealing focus after the correct initial restoration.
+    for (let sample = 0; sample < 5; sample += 1) {
+      assert.equal(await frame.locator(':focus').count(), 1);
+      assert.equal(
+        await frame.locator(`${selector}:focus`).count(),
+        1,
+        `Focus left ${selector}`,
+      );
+      if (sample < 4) await new Promise((resolve) => setTimeout(resolve, 50));
+    }
   }
   async function choose(title) {
-    const search = frame.getByRole('searchbox', { name: 'Search mortgage concepts' });
+    const search = frame.getByRole('searchbox', {
+      name: 'Search mortgage concepts',
+    });
     await search.fill(title);
-    await button(`${title} Prepayment / Measuring a speed`).waitFor({ state: 'visible' });
+    await button(`${title} Prepayment / Measuring a speed`).waitFor({
+      state: 'visible',
+    });
     await search.press('Enter');
     await expect_focus('h2');
     assert.equal(await reader.locator('h2').innerText(), title);
@@ -47,13 +70,19 @@ export async function check_mortgage_focus(tab, viewport = 'desktop') {
     await button('Explore connections').press('Enter');
     await expect_focus('#concept-connections');
     if (expanded) {
-      const first_control = viewport === 'mobile' ? 'Exit expanded map' : 'How to explore';
+      const first_control =
+        viewport === 'mobile' ? 'Exit expanded map' : 'How to explore';
       await button(first_control).press('Shift+Tab');
-      assert.equal(await frame.getByRole('dialog').locator(':focus').count(), 1);
+      assert.equal(
+        await frame.getByRole('dialog').locator(':focus').count(),
+        1,
+      );
       await frame.locator(':focus').press('Tab');
-      await expect_focus(viewport === 'mobile'
-        ? 'button[aria-label="Exit expanded map"]'
-        : 'button[aria-expanded]');
+      await expect_focus(
+        viewport === 'mobile'
+          ? 'button[aria-label="Exit expanded map"]'
+          : 'button[aria-expanded]',
+      );
     }
   }
   await frame.locator(':focus').press('Escape');
@@ -64,5 +93,11 @@ export async function check_mortgage_focus(tab, viewport = 'desktop') {
   await expect_focus('button[aria-label="Expand map"]');
   assert.equal(await frame.getByRole('dialog').count(), 0);
   assert.equal(await overflow(), original_overflow);
-  return { viewport, exit_focus: 'PASS', reader_navigation: 'PASS', focus_containment: 'PASS', escape: 'PASS' };
+  return {
+    viewport,
+    exit_focus: 'PASS',
+    reader_navigation: 'PASS',
+    focus_containment: 'PASS',
+    escape: 'PASS',
+  };
 }
