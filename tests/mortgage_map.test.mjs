@@ -229,7 +229,11 @@ test('search prioritizes exact terms and camera math preserves the zoom anchor',
 
 import { atlas_comparisons } from '../content/atlas_extensions.ts';
 import { render_mortgage_math, mortgage_math } from '../lib/mortgage_math.ts';
-import { study_edges, connection_route } from '../lib/mortgage_graph.ts';
+import {
+  study_edges,
+  connection_lanes,
+  connection_route,
+} from '../lib/mortgage_graph.ts';
 import {
   mechanism_models,
   mechanism_concepts,
@@ -349,7 +353,7 @@ test('each connection study has one line per neighbor and label lanes clear ever
   for (const c of mortgage_concepts) {
     const nodes = build_connection_graph(c.id),
       index = new Map(nodes.map((n) => [n.id, n]));
-    const edges = study_edges(c.id);
+    const edges = connection_lanes(c.id);
     const neighbors = edges.map((e) =>
       e.source === c.id ? e.target : e.source,
     );
@@ -377,15 +381,84 @@ test('each connection study has one line per neighbor and label lanes clear ever
 
 // Homepage destinations must survive future catalog changes.
 test('homepage domain entrances and spread filters stay complete and resolve to readers', async () => {
-  const { mortgage_domains, mortgage_preview_path } = await import('../content/mortgage_domains.ts');
+  const { mortgage_domains, mortgage_preview_path } =
+    await import('../content/mortgage_domains.ts');
   const { spread_groups } = await import('../content/mortgage_spreads.ts');
   const { atlas_comparisons } = await import('../content/atlas_extensions.ts');
   const catalog = new Map(mortgage_concepts.map((c) => [c.id, c]));
   assert.equal(mortgage_domains.length, mortgage_branches.length);
-  for (const domain of mortgage_domains) assert.equal(catalog.get(domain.entry)?.branch, domain.id);
+  for (const domain of mortgage_domains)
+    assert.equal(catalog.get(domain.entry)?.branch, domain.id);
   for (const step of mortgage_preview_path) assert.ok(catalog.has(step.id));
-  const measures = atlas_comparisons.find((c) => c.id === 'spreads').rows.map((r) => r.id);
-  const grouped = spread_groups.filter((g) => g.id !== 'all').flatMap((g) => g.concepts);
+  const measures = atlas_comparisons
+    .find((c) => c.id === 'spreads')
+    .rows.map((r) => r.id);
+  const grouped = spread_groups
+    .filter((g) => g.id !== 'all')
+    .flatMap((g) => g.concepts);
   assert.deepEqual([...grouped].sort(), [...measures].sort());
   assert.equal(new Set(grouped).size, grouped.length);
+});
+
+test('every concept participates in the analytical network with complete study explanations', () => {
+  for (const c of mortgage_concepts) {
+    const expected = mortgage_relationships.filter(
+      (e) => e.source === c.id || e.target === c.id,
+    );
+    assert.ok(expected.length > 0, `${c.id}: no analytical relationship`);
+    assert.deepEqual(
+      study_edges(c.id)
+        .map((e) => e.id)
+        .sort(),
+      expected.map((e) => e.id).sort(),
+    );
+    assert.deepEqual(
+      connection_lanes(c.id)
+        .flatMap((lane) => lane.relationships.map((e) => e.id))
+        .sort(),
+      expected.map((e) => e.id).sort(),
+    );
+  }
+  const basis = connection_lanes('basis_risk').find((lane) =>
+    lane.relationships.some((e) => e.source === 'spread_duration'),
+  );
+  assert.ok(
+    basis.relationships.length > 1,
+    'measurement and comparison must both survive',
+  );
+  assert.equal(
+    basis.directed,
+    false,
+    'a mixed relationship lane must not imply one causal arrow',
+  );
+});
+
+test('runoff and structured cash-flow links retain direction, conditions and public references', async () => {
+  const { foundational_relationships } =
+    await import('../content/mortgage_relationships.ts');
+  for (const edge of foundational_relationships) {
+    assert.ok(edge.conditions && edge.sources.length);
+    for (const id of edge.sources)
+      assert.ok(mortgage_sources[id], `${edge.id}: missing source ${id}`);
+  }
+  const runoff = mortgage_relationships.find(
+    (e) => e.source === 'prepayments' && e.target === 'qe_qt',
+  );
+  assert.ok(runoff?.conditions.includes('reinvestment'));
+  assert.equal(
+    mortgage_relationships.some(
+      (e) => e.source === 'qe_qt' && e.target === 'prepayments',
+    ),
+    false,
+  );
+  for (const [source, target, kind] of [
+    ['prepayments', 'io_po', 'mechanism'],
+    ['spot_curve', 'forward_curve', 'measurement'],
+    ['cmo', 'remic', 'comparison'],
+  ])
+    assert.ok(
+      mortgage_relationships.some(
+        (e) => e.source === source && e.target === target && e.kind === kind,
+      ),
+    );
 });

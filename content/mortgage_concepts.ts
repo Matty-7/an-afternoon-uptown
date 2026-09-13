@@ -1,4 +1,5 @@
 import { spread_topics, spread_sources, spread_concepts, spread_relationships } from './mortgage_spreads.ts';
+import { foundational_relationships } from './mortgage_relationships.ts';
 import {
   atlas_topics,
   atlas_sources,
@@ -33,6 +34,8 @@ export type MortgageRelationship = {
   label: string;
   reason: string;
   kind: 'mechanism' | 'definition' | 'measurement' | 'comparison';
+  conditions?: string;
+  sources?: string[];
 };
 
 export { mortgage_domains as mortgage_branches } from './mortgage_domains.ts';
@@ -3322,6 +3325,7 @@ export const mortgage_concepts: MortgageConcept[] = [
 }));
 
 export const mortgage_relationships: MortgageRelationship[] = [
+  ...foundational_relationships,
   { id: 'spreads__nominal_spread', source: 'spreads', target: 'nominal_spread', label: 'compares two yields', reason: 'A nominal spread subtracts a stated benchmark yield from the security yield under aligned conventions.', kind: 'definition' },
   { id: 'nominal_spread__i_spread', source: 'nominal_spread', target: 'i_spread', label: 'uses a swap reference', reason: 'I-spread is a yield comparison using an interpolated swap par rate.', kind: 'definition' },
   { id: 'spreads__z_spread', source: 'spreads', target: 'z_spread', label: 'discounts a fixed payment path', reason: 'Z-spread fits price with every projected cash flow under a stated scenario and zero curve.', kind: 'definition' },

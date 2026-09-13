@@ -5,6 +5,9 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { MortgageCheck } from './mortgage_check';
+import { MortgageRelations } from './mortgage_relations';
+import { MortgageNavigator } from './mortgage_navigator';
 import type { KeyboardEvent, PointerEvent } from 'react';
 import {
   ArrowLeft,
@@ -34,6 +37,7 @@ import {
 } from '@/content/mortgage_concepts';
 import {
   connection_route,
+  connection_lanes,
   study_edges,
   build_connection_graph,
   build_mortgage_graph,
@@ -71,15 +75,21 @@ export function MortgageMap({
   const [spread_group, set_spread_group] = useState('all');
   const comparison = atlas_comparisons.find((c) => c.id === comparison_id)!;
   const active_spread_group = spread_groups.find((g) => g.id === spread_group)!;
-  const comparison_rows = comparison_id === 'spreads' && spread_group !== 'all'
-    ? comparison.rows.filter((r) => active_spread_group.concepts.includes(r.id))
-    : comparison.rows;
+  const comparison_rows =
+    comparison_id === 'spreads' && spread_group !== 'all'
+      ? comparison.rows.filter((r) =>
+          active_spread_group.concepts.includes(r.id),
+        )
+      : comparison.rows;
   const [depth, set_depth] = useState(0);
   const [branch_filter, set_branch_filter] = useState('all');
   const [topic_filter, set_topic_filter] = useState('all');
   const [view, set_view] = useState<View>('map');
   const [selected, set_selected] = useState<string | null>(null);
   const [reader_open, set_reader_open] = useState(false);
+  const [reader_section, set_reader_section] = useState<
+    'title' | 'connections'
+  >('title');
   const [trail, set_trail] = useState<ReadingTrail>({ ids: [], cursor: -1 });
   const [location_ready, set_location_ready] = useState(false);
   const [link_status, set_link_status] = useState('');
@@ -131,7 +141,8 @@ export function MortgageMap({
     [relations],
   );
   const active_edges = useMemo(
-    () => (view === 'connections' && selected ? study_edges(selected) : []),
+    () =>
+      view === 'connections' && selected ? connection_lanes(selected) : [],
     [view, selected],
   );
 
@@ -220,13 +231,19 @@ export function MortgageMap({
   ]);
   useEffect(() => {
     if (!reader_open || !selected) return;
-    // A new concept starts at its title, even after following a lower link.
-    if (reader_ref.current) reader_ref.current.scrollTop = 0;
-    // Focus the reading heading without changing the visitor's page position.
-    reader_ref.current
-      ?.querySelector<HTMLElement>('h2')
-      ?.focus({ preventScroll: true });
-  }, [reader_open, selected]);
+    const reader = reader_ref.current;
+    if (!reader) return;
+    const target = reader.querySelector<HTMLElement>(
+      reader_section === 'connections' ? '#concept-connections' : 'h2',
+    );
+    reader.scrollTop = 0;
+    target?.focus({ preventScroll: true });
+    if (target && reader_section === 'connections')
+      reader.scrollTop =
+        target.getBoundingClientRect().top -
+        reader.getBoundingClientRect().top -
+        20;
+  }, [reader_open, selected, reader_section]);
 
   useEffect(() => {
     if (!reader_open && !expanded) return;
@@ -234,7 +251,9 @@ export function MortgageMap({
       if (event.key === 'Escape') {
         if (reader_open) set_reader_open(false);
         else set_expanded(false);
-        (canvas_ref.current ?? search_ref.current)?.focus({ preventScroll: true });
+        (canvas_ref.current ?? search_ref.current)?.focus({
+          preventScroll: true,
+        });
       }
     };
     window.addEventListener('keydown', on_escape);
@@ -243,6 +262,7 @@ export function MortgageMap({
 
   function choose_concept(id: string, trigger?: HTMLButtonElement) {
     if (!concept_index.has(id)) return;
+    set_reader_section('title');
     set_trail((current) => visit_concept(current, id));
     set_link_status('');
     if (trigger) return_focus.current = trigger;
@@ -272,7 +292,10 @@ export function MortgageMap({
     set_reader_open(false);
     if (return_focus.current?.isConnected)
       return_focus.current.focus({ preventScroll: true });
-    else (canvas_ref.current ?? search_ref.current)?.focus({ preventScroll: true });
+    else
+      (canvas_ref.current ?? search_ref.current)?.focus({
+        preventScroll: true,
+      });
   }
   function follow_history(offset: number) {
     const cursor = trail.cursor + offset;
@@ -772,14 +795,25 @@ export function MortgageMap({
                 <p>{comparison.intro}</p>
               </div>
               {comparison_id === 'spreads' && (
-                <div className="atlas-spread-filters" aria-label="Spread families">
+                <div
+                  className="atlas-spread-filters"
+                  aria-label="Spread families"
+                >
                   {spread_groups.map((group) => (
-                    <button key={group.id} aria-pressed={spread_group === group.id}
-                      onClick={() => { set_spread_group(group.id); set_reader_open(false); }}>
+                    <button
+                      key={group.id}
+                      aria-pressed={spread_group === group.id}
+                      onClick={() => {
+                        set_spread_group(group.id);
+                        set_reader_open(false);
+                      }}
+                    >
                       {group.title}
                     </button>
                   ))}
-                  <output aria-live="polite">{comparison_rows.length} measures</output>
+                  <output aria-live="polite">
+                    {comparison_rows.length} measures
+                  </output>
                 </div>
               )}
               <section
@@ -883,6 +917,22 @@ export function MortgageMap({
             </div>
           ) : (
             <div className="atlas-graph-shell">
+              {view === 'map' && (depth > 0 || camera.scale < 0.55) && (
+                <MortgageNavigator
+                  branch={branch_filter}
+                  topic={topic_filter}
+                  open_branch={open_branch}
+                  overview={overview}
+                  choose_concept={choose_concept}
+                  open_topic={(id, branch) => {
+                    set_branch_filter(branch);
+                    set_topic_filter(id);
+                    set_depth(2);
+                    set_selected(null);
+                    set_reader_open(false);
+                  }}
+                />
+              )}
               <div className="atlas-canvas-caption">
                 <p>
                   {view === 'connections'
@@ -955,38 +1005,67 @@ export function MortgageMap({
                       return (
                         <g
                           key={edge.id}
-                          className={`atlas-relation ${edge.kind === 'comparison' ? 'is-comparison' : ''}`}
+                          className={`atlas-relation ${edge.comparison ? 'is-comparison' : ''}`}
                         >
-                          <title>{`${source.title} → ${target.title}: ${edge.reason}`}</title>
+                          <title>
+                            {edge.relationships
+                              .map(
+                                (e) =>
+                                  `${concept_index.get(e.source)?.title} ${e.kind === 'comparison' ? '↔' : '→'} ${concept_index.get(e.target)?.title}: ${e.reason}`,
+                              )
+                              .join('\n')}
+                          </title>
                           <path
                             d={route}
                             markerEnd={
-                              edge.kind === 'comparison'
-                                ? undefined
-                                : 'url(#atlas-arrow)'
+                              edge.directed ? 'url(#atlas-arrow)' : undefined
                             }
                           />
-                          {view === 'connections' && (
-                            <g transform={`translate(${x}, ${y})`}>
-                              <rect
-                                x={-108}
-                                y={-12}
-                                width={216}
-                                height={24}
-                                rx={12}
-                              />
-                              <text
-                                textAnchor="middle"
-                                dominantBaseline="central"
-                              >
-                                {edge.label}
-                              </text>
-                            </g>
-                          )}
+                          {view === 'connections' &&
+                            edge.relationships.length === 1 && (
+                              <g transform={`translate(${x}, ${y})`}>
+                                <rect
+                                  x={-108}
+                                  y={-12}
+                                  width={216}
+                                  height={24}
+                                  rx={12}
+                                />
+                                <text
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                >
+                                  {edge.label}
+                                </text>
+                              </g>
+                            )}
                         </g>
                       );
                     })}
                   </svg>
+                  {active_edges
+                    .filter((edge) => edge.relationships.length > 1)
+                    .map((edge) => {
+                      const lane = connection_route(
+                        positions.get(edge.source)!,
+                        positions.get(edge.target)!,
+                      );
+                      return (
+                        <button
+                          key={edge.id}
+                          className="atlas-edge-label"
+                          style={{ left: lane.x - 108, top: lane.y - 18 }}
+                          aria-label={`Read all ${edge.relationships.length} relationships between ${concept_index.get(edge.source)?.title} and ${concept_index.get(edge.target)?.title}`}
+                          onClick={(event) => {
+                            return_focus.current = event.currentTarget;
+                            set_reader_open(true);
+                            set_reader_section('connections');
+                          }}
+                        >
+                          {edge.label}
+                        </button>
+                      );
+                    })}
                   {graph.map((node) => (
                     <button
                       key={node.id}
@@ -1299,73 +1378,17 @@ export function MortgageMap({
               <span>KEEP THIS DISTINCTION</span>
               <p>{concept.distinction}</p>
             </div>
-            {relations.length > 0 && (
-              <section className="atlas-reader-relations">
-                <div className="atlas-section-heading">
-                  <h3>How it connects</h3>
-                  <button
-                    className="atlas-text-button"
-                    onClick={() => set_view('connections')}
-                  >
-                    Explore connections <Network size={14} />
-                  </button>
-                </div>
-                {(['incoming', 'outgoing'] as const).map((direction) => {
-                  const entries = relations.filter((e) =>
-                    direction === 'incoming'
-                      ? e.target === selected
-                      : e.source === selected,
-                  );
-                  return (
-                    entries.length > 0 && (
-                      <div key={direction}>
-                        <p className="atlas-relation-direction">
-                          {direction === 'incoming'
-                            ? '← Leads into this concept'
-                            : '→ Follow the connection'}
-                        </p>
-                        {entries.map((edge) => {
-                          const other =
-                            direction === 'incoming'
-                              ? edge.source
-                              : edge.target;
-                          return (
-                            <button
-                              className="atlas-related"
-                              key={edge.id}
-                              onClick={(e) =>
-                                choose_concept(other, e.currentTarget)
-                              }
-                            >
-                              <span>
-                                {concept_index.get(other)?.title}
-                                <ArrowUpRight size={14} />
-                              </span>
-                              <small>
-                                {direction === 'incoming'
-                                  ? `${concept_index.get(other)?.title} → ${concept.title}`
-                                  : `${concept.title} → ${concept_index.get(other)?.title}`}
-                              </small>
-                              <p>{edge.reason}</p>
-                              <em>{edge.kind}</em>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )
-                  );
-                })}
-              </section>
-            )}
-            <details className="atlas-check">
-              <summary>
-                Check your understanding <ChevronDown size={15} />
-              </summary>
-              <p>
-                <strong>{concept.question}</strong>
-              </p>
-              <p>{concept.answer}</p>
-            </details>
+            <MortgageRelations
+              relations={relations}
+              choose_concept={choose_concept}
+              explore={() => set_view('connections')}
+            />
+            <MortgageCheck
+              key={concept.id}
+              id={concept.id}
+              question={concept.question}
+              answer={concept.answer}
+            />
             <details className="atlas-further">
               <summary>
                 Related reading <ChevronDown size={15} />
