@@ -2132,3 +2132,9 @@
     box-sizing: border-box;
   }
 }
+
+.atlas-spread-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 20px; }
+.atlas-spread-filters button { min-height: 40px; padding: 8px 12px; border: 1px solid #c7bea9; border-radius: 20px; background: transparent; color: #39443b; font-size: 12px; cursor: pointer; }
+.atlas-spread-filters button[aria-pressed="true"] { background: #273a30; color: #fff6df; border-color: #273a30; }
+.atlas-spread-filters button:focus-visible { outline: 2px solid #945127; outline-offset: 3px; }
+.atlas-spread-filters > output { margin-left: auto; color: #655f53; font-size: 12px; }

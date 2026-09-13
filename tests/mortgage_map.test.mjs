@@ -374,3 +374,18 @@ test('each connection study has one line per neighbor and label lanes clear ever
     }
   }
 });
+
+// Homepage destinations must survive future catalog changes.
+test('homepage domain entrances and spread filters stay complete and resolve to readers', async () => {
+  const { mortgage_domains, mortgage_preview_path } = await import('../content/mortgage_domains.ts');
+  const { spread_groups } = await import('../content/mortgage_spreads.ts');
+  const { atlas_comparisons } = await import('../content/atlas_extensions.ts');
+  const catalog = new Map(mortgage_concepts.map((c) => [c.id, c]));
+  assert.equal(mortgage_domains.length, mortgage_branches.length);
+  for (const domain of mortgage_domains) assert.equal(catalog.get(domain.entry)?.branch, domain.id);
+  for (const step of mortgage_preview_path) assert.ok(catalog.has(step.id));
+  const measures = atlas_comparisons.find((c) => c.id === 'spreads').rows.map((r) => r.id);
+  const grouped = spread_groups.filter((g) => g.id !== 'all').flatMap((g) => g.concepts);
+  assert.deepEqual([...grouped].sort(), [...measures].sort());
+  assert.equal(new Set(grouped).size, grouped.length);
+});

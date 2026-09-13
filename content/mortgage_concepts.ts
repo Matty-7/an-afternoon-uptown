@@ -1,5 +1,5 @@
+import { spread_topics, spread_sources, spread_concepts, spread_relationships } from './mortgage_spreads.ts';
 import {
-  atlas_branches,
   atlas_topics,
   atlas_sources,
   atlas_concepts,
@@ -35,57 +35,7 @@ export type MortgageRelationship = {
   kind: 'mechanism' | 'definition' | 'measurement' | 'comparison';
 };
 
-export const mortgage_branches = [
-  {
-    id: 'basics',
-    title: 'Loans & pools',
-    question: 'What is actually being financed?',
-    number: '01',
-  },
-  {
-    id: 'prepayment',
-    title: 'Prepayment',
-    question: 'Why does principal come back early?',
-    number: '02',
-  },
-  {
-    id: 'trading',
-    title: 'Markets & trading',
-    question: 'What changes hands, and at what price?',
-    number: '03',
-  },
-  {
-    id: 'valuation',
-    title: 'Cash flows & value',
-    question: 'How does future money become today’s value?',
-    number: '04',
-  },
-  {
-    id: 'curves',
-    title: 'Curves & spreads',
-    question: 'Which rate, which curve, which comparison?',
-    number: '05',
-  },
-  {
-    id: 'risk',
-    title: 'Risk & hedging',
-    question: 'What changes when the world changes?',
-    number: '06',
-  },
-  {
-    id: 'structure',
-    title: 'CMO & structures',
-    question: 'Who receives the cash, and who absorbs the change?',
-    number: '07',
-  },
-  {
-    id: 'credit',
-    title: 'Credit & property',
-    question: 'Can the underlying borrower repay?',
-    number: '08',
-  },
-  ...atlas_branches,
-];
+export { mortgage_domains as mortgage_branches } from './mortgage_domains.ts';
 
 const original_topics = [
   {
@@ -263,6 +213,7 @@ export const mortgage_topics = [
     .filter((t) => t.concepts.length),
   ...atlas_topics,
   ...mechanism_topics,
+  ...spread_topics,
 ];
 
 export const mortgage_sources: Record<
@@ -271,6 +222,7 @@ export const mortgage_sources: Record<
 > = {
   ...atlas_sources,
   ...mechanism_sources,
+  ...spread_sources,
   cfpb: {
     publisher: 'CFPB',
     title: 'How does paying down a mortgage work?',
@@ -3353,6 +3305,7 @@ const formula_additions: Record<
 };
 export const mortgage_concepts: MortgageConcept[] = [
   ...mechanism_concepts,
+  ...spread_concepts,
   ...original_concepts.filter(
     (c) => !atlas_concepts.some((n) => n.id === c.id),
   ),
@@ -3369,7 +3322,16 @@ export const mortgage_concepts: MortgageConcept[] = [
 }));
 
 export const mortgage_relationships: MortgageRelationship[] = [
+  { id: 'spreads__nominal_spread', source: 'spreads', target: 'nominal_spread', label: 'compares two yields', reason: 'A nominal spread subtracts a stated benchmark yield from the security yield under aligned conventions.', kind: 'definition' },
+  { id: 'nominal_spread__i_spread', source: 'nominal_spread', target: 'i_spread', label: 'uses a swap reference', reason: 'I-spread is a yield comparison using an interpolated swap par rate.', kind: 'definition' },
+  { id: 'spreads__z_spread', source: 'spreads', target: 'z_spread', label: 'discounts a fixed payment path', reason: 'Z-spread fits price with every projected cash flow under a stated scenario and zero curve.', kind: 'definition' },
+  { id: 'spreads__oas', source: 'spreads', target: 'oas', label: 'models option-sensitive payments', reason: 'OAS fits price while allowing modeled payment behavior to change across rate paths.', kind: 'definition' },
+  { id: 'spreads__asset_swap', source: 'spreads', target: 'asset_swap', label: 'values a bond and swap package', reason: 'Asset-swap spread depends on the package cash flows and upfront convention rather than simple yield subtraction.', kind: 'comparison' },
+  { id: 'spreads__discount_margin', source: 'spreads', target: 'discount_margin', label: 'solves a floater margin', reason: 'Discount margin matches a floater price under stated reference-rate and discounting assumptions.', kind: 'comparison' },
+  { id: 'spreads__excess_spread', source: 'spreads', target: 'excess_spread', label: 'distinguishes deal income', reason: 'Excess spread describes income after specified expenses and losses, not a valuation premium over a rate curve.', kind: 'comparison' },
+
   ...mechanism_relationships,
+  ...spread_relationships,
   ...atlas_relationships,
   {
     id: "prepayments__reinvestment",
@@ -4029,6 +3991,11 @@ export const mortgage_relationships: MortgageRelationship[] = [
 export const mortgage_paths = [
   ...mechanism_models,
   ...atlas_paths,
+  {
+    id: 'quote_to_model', title: 'From a yield quote to an option model',
+    description: 'Change the benchmark, then the calculation, and see why the numbers answer different questions.',
+    steps: ['g_spread', 'nominal_spread', 'i_spread', 'z_spread', 'oas', 'model_risk'],
+  },
   {
     id: 'borrower_to_hedge',
     title: 'From a borrower to a hedge',

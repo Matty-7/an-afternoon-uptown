@@ -5,6 +5,14 @@ import { mortgage_concepts } from '../content/mortgage_concepts.ts';
 // never a TeX parser or visitor-supplied markup. Fonts are bundled locally.
 export const mortgage_math: Record<string, { tex: string; variables: string }> =
   {
+    cds_bond_basis: {
+      tex: String.raw`b_{\mathrm{bp}}=s_{\mathrm{CDS,bp}}-s_{\mathrm{bond,bp}}`,
+      variables: 'b: basis; s: spread in basis points. Align reference entity, seniority, currency and maturity; identify the bond-spread method.',
+    },
+    excess_spread: {
+      tex: String.raw`E_t=R_t-I_t-F_t-L_t`,
+      variables: 'E: excess income; R: collected finance charges and other income; I: certificate interest; F: servicing and other senior expenses; L: charge-offs. All amounts use the same currency and period t.',
+    },
     dti: {
       tex: String.raw`\mathrm{DTI}=\frac{D_{\mathrm{monthly}}}{Y_{\mathrm{monthly}}}`,
       variables:

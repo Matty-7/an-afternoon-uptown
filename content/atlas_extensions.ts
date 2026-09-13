@@ -5,20 +5,6 @@ import type {
 
 // Public financial concepts only. Currency, collateral, guarantee and coupon are
 // separate dimensions, not interchangeable levels in a product taxonomy.
-export const atlas_branches = [
-  {
-    id: 'products',
-    title: 'Product families',
-    question: 'What backs the promise to pay?',
-    number: '09',
-  },
-  {
-    id: 'currencies',
-    title: 'Currencies & benchmarks',
-    question: 'Which money, which reference rate?',
-    number: '10',
-  },
-];
 export const atlas_topics = [
   {
     id: 'market_structure',
@@ -1087,10 +1073,10 @@ export type ComparisonSet = {
 export const atlas_comparisons: ComparisonSet[] = [
   {
     id: 'spreads',
-    title: 'A spread always needs a reference.',
+    title: 'Same word. Different measurements.',
     eyebrow: '01 / COMPARE SPREADS',
     intro:
-      'Start with what is being subtracted or solved for. Then ask which cash flows, which curve and which options are included.',
+      'Separate the benchmark from the method: government or swap is a reference choice; yield subtraction, cash-flow discounting and option modeling are different calculations. Most rate spreads are quoted in basis points. Excess spread is deal income under a separate convention.',
     takeaway:
       'A larger number is not automatically better compensation. Change the benchmark or model and the reported spread can change without a change in the bond.',
     columns: [
@@ -1101,6 +1087,14 @@ export const atlas_comparisons: ComparisonSet[] = [
       'Keep in mind',
     ],
     rows: [
+      {
+        id: 'credit_spread',
+        cells: ['Credit spread', 'A stated lower-risk benchmark', 'An umbrella description; specify the calculation', 'What compensation accompanies this credit exposure?', 'Can include loss risk, liquidity and other effects; not a default probability.'],
+      },
+      {
+        id: 'nominal_spread',
+        cells: ['Nominal spread', 'One stated benchmark yield', 'Subtract two yields with aligned conventions', 'How far apart are these quoted yields?', 'The benchmark, tenor and yield conventions must be named.'],
+      },
       {
         id: 'g_spread',
         cells: [
@@ -1190,6 +1184,22 @@ export const atlas_comparisons: ComparisonSet[] = [
           'What is the adjustment for swapping funding currencies?',
           'Sign depends on the quoted leg.',
         ],
+      },
+      {
+        id: 'cds_spread',
+        cells: ['CDS spread', 'Specified credit protection contract', 'Premium and contingent protection legs', 'What does protection against these credit events cost?', 'Check reference entity, maturity, seniority and quote convention.'],
+      },
+      {
+        id: 'cds_bond_basis',
+        cells: ['CDS–bond basis', 'CDS spread minus comparable bond spread', 'Related exposures in derivative and cash markets', 'How differently do the two markets price credit?', 'Funding, liquidity and contractual mismatches can sustain the gap.'],
+      },
+      {
+        id: 'primary_secondary_spread',
+        cells: ['Primary–secondary spread', 'Borrower mortgage rate minus a representative new-production MBS yield', 'A comparison along the mortgage production chain', 'How far apart are borrower and secondary-market rates?', 'Includes costs and margins; not pure lender profit or MBS OAS.'],
+      },
+      {
+        id: 'excess_spread',
+        cells: ['Excess spread', 'Deal income less specified costs and losses', 'Period income; a ratio needs a balance and time convention', 'What income remains under the deal’s waterfall?', 'A structural income measure, not a benchmark valuation spread.'],
       },
     ],
   },
