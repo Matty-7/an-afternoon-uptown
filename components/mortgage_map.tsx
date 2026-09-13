@@ -243,11 +243,12 @@ export function MortgageMap({
     target?.focus({ preventScroll: true });
     if (target) {
       const rect = target.getBoundingClientRect();
-      const top_inset = expanded ? 156 : 88;
+      // Expansion owns focus on exit; its layout is not a reader focus request.
+      const top_inset = reader.closest('[aria-modal="true"]') ? 156 : 88;
       if (rect.top < top_inset || rect.bottom > window.innerHeight - 24)
         target.scrollIntoView({ block: 'start' });
     }
-  }, [reader_open, selected, reader_section, expanded]);
+  }, [reader_open, selected, reader_section]);
 
   function choose_concept(id: string, trigger?: HTMLButtonElement) {
     if (!concept_index.has(id)) return;
